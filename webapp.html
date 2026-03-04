@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduSmart AI Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+
+    <div class="flex">
+        <aside class="w-64 bg-slate-800 h-screen sticky top-0 p-6 shadow-xl">
+            <h1 class="text-2xl font-bold text-blue-400 mb-10"><i class="fa-solid fa-brain mr-2"></i>EduSmart AI</h1>
+            <nav class="space-y-4">
+                <button onclick="showTab('monitor')" class="w-full flex items-center p-3 hover:bg-slate-700 rounded-lg transition"><i class="fa-solid fa-eye mr-3"></i> Monitor</button>
+                <button onclick="showTab('quiz')" class="w-full flex items-center p-3 hover:bg-slate-700 rounded-lg transition"><i class="fa-solid fa-feather mr-3"></i> Adaptive Quiz</button>
+                <button onclick="showTab('chat')" class="w-full flex items-center p-3 hover:bg-slate-700 rounded-lg transition"><i class="fa-solid fa-robot mr-3"></i> AI Counselor</button>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-10">
+            <div id="monitor" class="tab-content animate-fade-in">
+                <h2 class="text-3xl font-bold mb-6">🎯 Attention Monitoring</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700">
+                        <video id="video" class="w-full rounded-xl bg-black mirror" autoplay></video>
+                        <button onclick="startCamera()" class="mt-4 w-full bg-blue-600 hover:bg-blue-500 p-3 rounded-xl font-bold transition">เปิดใช้งานกล้อง AI</button>
+                    </div>
+                    <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 flex flex-col justify-center text-center">
+                        <p class="text-slate-400 uppercase tracking-widest text-sm mb-2">Current Status</p>
+                        <p id="status" class="text-4xl font-bold text-green-400">READY</p>
+                        <div class="mt-6 h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div id="progress" class="h-full bg-blue-500 w-full transition-all duration-500"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="quiz" class="tab-content hidden">
+                <h2 class="text-3xl font-bold mb-6">📝 Smart Adaptive Quiz</h2>
+                <div class="max-w-2xl bg-slate-800 p-8 rounded-2xl border border-slate-700">
+                    <div class="mb-8">
+                        <span id="level-tag" class="bg-blue-900 text-blue-300 px-3 py-1 rounded-full text-xs font-bold uppercase">Level: Easy</span>
+                        <p id="question" class="text-2xl mt-4 font-medium text-slate-200">15 + 25 เท่ากับเท่าไหร่?</p>
+                    </div>
+                    <input type="text" id="ans" class="w-full bg-slate-900 border border-slate-600 p-4 rounded-xl mb-4 focus:border-blue-500 outline-none" placeholder="ระบุคำตอบของคุณ...">
+                    <button onclick="checkAns()" class="w-full bg-emerald-600 hover:bg-emerald-500 p-4 rounded-xl font-bold transition">ส่งคำตอบ</button>
+                    <p id="quiz-msg" class="mt-4 text-center text-slate-400"></p>
+                </div>
+            </div>
+
+            <div id="chat" class="tab-content hidden h-[80vh] flex flex-col">
+                <h2 class="text-3xl font-bold mb-6">🤖 AI Career Counselor</h2>
+                <div class="flex-1 bg-slate-800 rounded-2xl border border-slate-700 p-6 overflow-y-auto mb-4 space-y-4" id="chat-box">
+                    <div class="bg-slate-700 p-4 rounded-2xl rounded-tl-none max-w-[80%]">
+                        สวัสดีครับ! ผมเป็น AI แนะแนวอาชีพ ลองทำข้อสอบแล้วมาคุยกันนะครับว่าคุณเหมาะกับคณะอะไร?
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <input type="text" id="chat-input" class="flex-1 bg-slate-800 border border-slate-700 p-4 rounded-xl outline-none focus:border-blue-500" placeholder="พิมพ์ข้อความที่นี่...">
+                    <button onclick="sendChat()" class="bg-blue-600 p-4 rounded-xl w-16 hover:bg-blue-500 transition"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function showTab(id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function startCamera() {
+            const video = document.getElementById('video');
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => { 
+                    video.srcObject = stream;
+                    document.getElementById('status').innerText = "FOCUSING";
+                })
+                .catch(err => alert("Error: " + err));
+        }
+
+        let step = 0;
+        const questions = [
+            {q: "15 + 25 เท่ากับเท่าไหร่?", a: "40", lv: "Easy"},
+            {q: "ถอดรากที่สองของ 625 คืออะไร?", a: "25", lv: "Medium"},
+            {q: "2 ยกกำลัง 10 (2^10) มีค่าเท่าไหร่?", a: "1024", lv: "Hard"}
+        ];
+
+        function checkAns() {
+            const input = document.getElementById('ans');
+            const msg = document.getElementById('quiz-msg');
+            if(input.value == questions[step].a) {
+                step++;
+                if(step < questions.length) {
+                    document.getElementById('question').innerText = questions[step].q;
+                    document.getElementById('level-tag').innerText = "Level: " + questions[step].lv;
+                    msg.innerHTML = "<span class='text-emerald-400'>ถูกต้อง! ปรับระดับความยากขึ้น...</span>";
+                } else {
+                    msg.innerHTML = "<span class='text-yellow-400 font-bold text-xl'>ยินดีด้วย! คุณเก่งระดับอัจฉริยะ 🎉</span>";
+                }
+            } else {
+                msg.innerHTML = "<span class='text-rose-400 text-sm'>ยังไม่ถูกนะ ลองคิดดูอีกที!</span>";
+            }
+            input.value = "";
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const box = document.getElementById('chat-box');
+            if(!input.value) return;
+
+            box.innerHTML += `<div class="bg-blue-600 p-4 rounded-2xl rounded-tr-none max-w-[80%] ml-auto text-white">${input.value}</div>`;
+            
+            setTimeout(() => {
+                box.innerHTML += `<div class="bg-slate-700 p-4 rounded-2xl rounded-tl-none max-w-[80%]">วิเคราะห์จากสมาธิและคะแนนสอบของคุณ: คุณเด่นด้านคณิตศาสตร์มาก แนะนำคณะวิศวกรรมคอมพิวเตอร์ครับ!</div>`;
+                box.scrollTop = box.scrollHeight;
+            }, 600);
+            input.value = "";
+        }
+    </script>
+
+    <style>
+        .animate-fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .mirror { transform: scaleX(-1); }
+    </style>
+</body>
+</html>
