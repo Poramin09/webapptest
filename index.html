@@ -3,84 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduSmart AI - Pro Edition</title>
+    <title>EduSmart AI - Real-time Vision</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
-        body { font-family: 'Kanit', sans-serif; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        body { font-family: 'Kanit', sans-serif; background-color: #0f172a; }
         .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-content.active { display: block; animation: slideUp 0.4s ease; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        canvas#ai-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen pb-20 md:pb-0">
+<body class="text-slate-100 min-h-screen">
 
-    <aside class="hidden md:flex w-64 bg-slate-900 h-screen fixed left-0 top-0 flex-col p-6 border-r border-slate-800">
-        <h1 class="text-2xl font-bold text-blue-500 mb-10"><i class="fa-solid fa-robot mr-2"></i>EduSmart</h1>
-        <nav class="space-y-2">
-            <button onclick="switchTab('monitor')" class="nav-btn w-full flex items-center p-3 rounded-xl hover:bg-slate-800 transition text-slate-400 hover:text-white"><i class="fa-solid fa-video mr-3 w-6"></i>Monitor</button>
-            <button onclick="switchTab('quiz')" class="nav-btn w-full flex items-center p-3 rounded-xl hover:bg-slate-800 transition text-slate-400 hover:text-white"><i class="fa-solid fa-brain mr-3 w-6"></i>Smart Quiz</button>
-            <button onclick="switchTab('chat')" class="nav-btn w-full flex items-center p-3 rounded-xl hover:bg-slate-800 transition text-slate-400 hover:text-white"><i class="fa-solid fa-comments mr-3 w-6"></i>AI Counselor</button>
+    <aside class="hidden md:flex w-64 bg-slate-900/80 h-screen fixed left-0 top-0 flex-col p-6 border-r border-slate-800 z-50">
+        <h1 class="text-2xl font-bold text-blue-500 mb-10 tracking-tighter"><i class="fa-solid fa-bolt-lightning mr-2"></i>EDUSMART AI</h1>
+        <nav class="space-y-3">
+            <button onclick="switchTab('monitor')" class="w-full flex items-center p-3 rounded-xl bg-slate-800 text-white"><i class="fa-solid fa-face-smile mr-3"></i>AI Monitor</button>
+            <button onclick="switchTab('quiz')" class="w-full flex items-center p-3 rounded-xl hover:bg-slate-800 transition"><i class="fa-solid fa-gamepad mr-3"></i>Adaptive Quiz</button>
+            <button onclick="switchTab('chat')" class="w-full flex items-center p-3 rounded-xl hover:bg-slate-800 transition"><i class="fa-solid fa-comment-dots mr-3"></i>AI Counselor</button>
         </nav>
     </aside>
 
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 flex justify-around p-4 z-50">
-        <button onclick="switchTab('monitor')" class="text-slate-400 hover:text-blue-500"><i class="fa-solid fa-video text-xl"></i></button>
-        <button onclick="switchTab('quiz')" class="text-slate-400 hover:text-blue-500"><i class="fa-solid fa-brain text-xl"></i></button>
-        <button onclick="switchTab('chat')" class="text-slate-400 hover:text-blue-500"><i class="fa-solid fa-comments text-xl"></i></button>
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass border-t border-slate-800 flex justify-around p-4 z-50">
+        <button onclick="switchTab('monitor')" class="text-blue-500"><i class="fa-solid fa-face-smile text-xl"></i></button>
+        <button onclick="switchTab('quiz')" class="text-slate-400"><i class="fa-solid fa-gamepad text-xl"></i></button>
+        <button onclick="switchTab('chat')" class="text-slate-400"><i class="fa-solid fa-comment-dots text-xl"></i></button>
     </nav>
 
     <main class="md:ml-64 p-4 md:p-10 mb-20">
         
         <section id="monitor" class="tab-content active">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold italic text-blue-400 tracking-tighter uppercase">AI Focus Tracking</h2>
-                <span class="bg-green-900/50 text-green-400 px-3 py-1 rounded-full text-xs">Live Analytics</span>
+            <div class="mb-6">
+                <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">AI FOCUS TRACKER</h2>
+                <p class="text-slate-400 text-sm">ระบบตรวจจับใบหน้าและสมาธิแบบ Real-time</p>
             </div>
+            
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 glass rounded-3xl overflow-hidden p-2">
-                    <video id="video" class="w-full rounded-2xl bg-black" autoplay muted playsinline></video>
-                    <button onclick="initCamera()" id="camBtn" class="w-full mt-2 bg-blue-600 p-4 rounded-xl font-bold">Start AI Vision</button>
-                </div>
-                <div class="glass p-6 rounded-3xl flex flex-col justify-between">
-                    <div>
-                        <p class="text-slate-400 text-sm mb-1 uppercase tracking-widest">Attention Level</p>
-                        <h3 id="focusStatus" class="text-4xl font-black text-blue-500">READY</h3>
+                <div class="lg:col-span-2 glass rounded-3xl overflow-hidden relative shadow-2xl">
+                    <video id="webcam" class="w-full h-full object-cover scale-x-[-1]" autoplay playsinline></video>
+                    <canvas id="ai-canvas" class="w-full h-full scale-x-[-1]"></canvas>
+                    <div id="loading-ai" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
+                        <div class="text-center">
+                            <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-2"></i>
+                            <p>กำลังโหลดระบบ AI...</p>
+                        </div>
                     </div>
-                    <div class="h-40 w-full mt-4">
-                        <canvas id="focusChart"></canvas>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="glass p-6 rounded-3xl text-center">
+                        <p class="text-slate-400 uppercase text-xs tracking-widest mb-2">Focus Status</p>
+                        <h3 id="focus-label" class="text-4xl font-black text-slate-500 italic">WAITING...</h3>
+                    </div>
+                    <div class="glass p-6 rounded-3xl h-64">
+                        <canvas id="liveChart"></canvas>
                     </div>
                 </div>
             </div>
         </section>
 
         <section id="quiz" class="tab-content">
-            <h2 class="text-2xl font-bold mb-6 italic text-purple-400 tracking-tighter uppercase">Smart Adaptive Quiz</h2>
-            <div class="max-w-xl mx-auto glass p-8 rounded-[2rem]">
-                <div class="flex justify-between mb-4">
-                    <span id="lvBadge" class="bg-blue-600 text-[10px] px-3 py-1 rounded-full uppercase font-bold tracking-tighter">Level: Easy</span>
-                    <span class="text-slate-500 text-sm">Score: <span id="score">0</span></span>
+            <h2 class="text-3xl font-bold mb-6">📝 SMART QUIZ</h2>
+            <div class="max-w-2xl mx-auto glass p-8 rounded-[2.5rem] border-t-4 border-blue-500 shadow-2xl">
+                <div class="flex justify-between items-center mb-10">
+                    <span id="level-badge" class="bg-blue-600 px-4 py-1 rounded-full text-xs font-bold">LEVEL: EASY</span>
+                    <span class="text-2xl font-bold text-blue-400">Score: <span id="score-val">0</span></span>
                 </div>
-                <div id="quizContainer">
-                    <p id="questionDisplay" class="text-3xl font-bold mb-8 text-center min-h-[4rem]">---</p>
-                    <input type="number" id="userAns" class="w-full bg-slate-800/50 border-2 border-slate-700 p-5 rounded-2xl mb-4 text-center text-2xl focus:border-blue-500 outline-none transition" placeholder="?">
-                    <button onclick="checkDynamicAns()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 p-5 rounded-2xl font-bold text-xl shadow-lg shadow-blue-900/20 active:scale-95 transition">Submit</button>
+                <div class="text-center py-10">
+                    <p id="q-text" class="text-5xl font-bold mb-10 tracking-tight">---</p>
+                    <input type="number" id="q-input" class="w-full bg-slate-800/50 border-2 border-slate-700 p-6 rounded-3xl text-center text-3xl focus:border-blue-500 outline-none transition mb-6" placeholder="คำตอบของคุณ">
+                    <button onclick="handleQuizSubmit()" class="w-full bg-blue-600 hover:bg-blue-500 py-6 rounded-3xl font-bold text-xl shadow-lg transition active:scale-95">ส่งคำตอบ</button>
                 </div>
             </div>
         </section>
 
         <section id="chat" class="tab-content h-[80vh]">
-            <h2 class="text-2xl font-bold mb-6 italic text-emerald-400 tracking-tighter uppercase">AI Career Counselor</h2>
-            <div class="glass h-full rounded-[2rem] flex flex-col overflow-hidden border-slate-800">
-                <div id="chatBox" class="flex-1 p-6 overflow-y-auto space-y-4 text-sm">
-                    <div class="bg-slate-800 p-4 rounded-2xl rounded-tl-none max-w-[85%]">สวัสดีครับ! ผมเป็น AI ที่จะช่วยเลือกคณะจากทักษะและสมาธิของคุณครับ ลองทำ Quiz ให้จบแล้วมาถามผมนะ!</div>
+            <h2 class="text-3xl font-bold mb-6">🤖 AI COUNSELOR</h2>
+            <div class="glass h-full rounded-[2.5rem] flex flex-col overflow-hidden border border-slate-800 shadow-2xl">
+                <div id="chat-window" class="flex-1 p-6 overflow-y-auto space-y-4">
+                    <div class="bg-slate-800 p-4 rounded-2xl rounded-tl-none max-w-[80%] text-sm">
+                        สวัสดีครับ! ผมจะช่วยวิเคราะห์ข้อมูลจากสมาธิและคะแนนสอบของคุณ เพื่อแนะนำคณะที่เหมาะสมให้ครับ
+                    </div>
                 </div>
-                <div class="p-4 bg-slate-900/50 flex gap-2">
-                    <input type="text" id="chatInput" class="flex-1 bg-slate-800 border border-slate-700 p-4 rounded-xl outline-none" placeholder="ถามเกี่ยวกับอาชีพ...">
-                    <button onclick="aiChat()" class="bg-blue-600 w-14 rounded-xl items-center flex justify-center text-xl"><i class="fa-solid fa-paper-plane"></i></button>
+                <div class="p-4 bg-slate-900/80 flex gap-3">
+                    <input type="text" id="chat-in" class="flex-1 bg-slate-800 border border-slate-700 p-4 rounded-2xl outline-none focus:border-blue-500" placeholder="ถาม AI เกี่ยวกับอาชีพ...">
+                    <button onclick="sendChat()" class="bg-blue-600 w-16 rounded-2xl flex items-center justify-center text-xl hover:bg-blue-500 transition"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
         </section>
@@ -88,90 +104,123 @@
     </main>
 
     <script>
-        // Tab System
+        // --- ระบบสลับ TAB ---
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById(id).classList.add('active');
+            document.querySelectorAll('nav button, aside button').forEach(b => b.classList.remove('text-blue-500'));
         }
 
-        // --- 🎯 AI Monitor & Chart System ---
-        let focusData = [80, 85, 90, 88, 92, 85];
-        const ctx = document.getElementById('focusChart').getContext('2d');
-        const focusChart = new Chart(ctx, {
+        // --- ระบบ AI MONITOR (ของจริง!) ---
+        const videoElement = document.getElementById('webcam');
+        const canvasElement = document.getElementById('ai-canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const focusLabel = document.getElementById('focus-label');
+        let focusScore = 80;
+
+        // ระบบกราฟ
+        const chartCtx = document.getElementById('liveChart').getContext('2d');
+        const liveChart = new Chart(chartCtx, {
             type: 'line',
             data: {
-                labels: ['1m', '2m', '3m', '4m', '5m', 'Now'],
-                datasets: [{ label: 'Focus Score', data: focusData, borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)' }]
+                labels: ['', '', '', '', '', '', '', '', '', ''],
+                datasets: [{ label: 'Focus', data: [80,80,80,80,80,80,80,80,80,80], borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)', pointRadius: 0 }]
             },
-            options: { plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false } } } }
+            options: { plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, display: false }, x: { display: false } } }
         });
 
-        async function initCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                document.getElementById('video').srcObject = stream;
-                document.getElementById('focusStatus').innerText = "TRACKING";
-                document.getElementById('camBtn').classList.add('hidden');
-            } catch (err) { alert("Please allow camera access"); }
-        }
-
-        // --- 📝 Smart Dynamic Quiz System (ไม่ฟิกโจทย์!) ---
-        let currentLevel = 1;
-        let score = 0;
-        let correctAnswer = 0;
-
-        function generateQuestion() {
-            let n1, n2;
-            if (currentLevel === 1) { // Easy
-                n1 = Math.floor(Math.random() * 20) + 5;
-                n2 = Math.floor(Math.random() * 20) + 5;
-                correctAnswer = n1 + n2;
-                document.getElementById('questionDisplay').innerText = `${n1} + ${n2} = ?`;
-                document.getElementById('lvBadge').innerText = "Level: Easy";
-            } else if (currentLevel === 2) { // Medium
-                n1 = Math.floor(Math.random() * 50) + 10;
-                n2 = Math.floor(Math.random() * 30) + 10;
-                correctAnswer = n1 - n2;
-                document.getElementById('questionDisplay').innerText = `${n1} - ${n2} = ?`;
-                document.getElementById('lvBadge').innerText = "Level: Medium";
-            } else { // Hard
-                n1 = Math.floor(Math.random() * 12) + 2;
-                n2 = Math.floor(Math.random() * 12) + 2;
-                correctAnswer = n1 * n2;
-                document.getElementById('questionDisplay').innerText = `${n1} × ${n2} = ?`;
-                document.getElementById('lvBadge').innerText = "Level: Hard";
-            }
-        }
-
-        function checkDynamicAns() {
-            const userInp = document.getElementById('userAns');
-            if (parseInt(userInp.value) === correctAnswer) {
-                score += 10;
-                currentLevel = score > 50 ? 3 : (score > 20 ? 2 : 1);
-                document.getElementById('score').innerText = score;
-                generateQuestion();
-                userInp.value = "";
-            } else {
-                alert("ลองใหม่อีกครั้งนะ!");
-            }
-        }
-        generateQuestion(); // Start first question
-
-        // --- 🤖 AI Chat System (Dynamic Response) ---
-        function aiChat() {
-            const inp = document.getElementById('chatInput');
-            const box = document.getElementById('chatBox');
-            if (!inp.value) return;
-
-            box.innerHTML += `<div class="bg-blue-600 p-4 rounded-2xl rounded-tr-none max-w-[85%] ml-auto text-white">${inp.value}</div>`;
+        function onResults(results) {
+            document.getElementById('loading-ai').style.display = 'none';
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             
-            // จำลองการคิดของ AI โดยอิงจาก Score จริงๆ
+            if (results.detections.length > 0) {
+                focusScore = Math.min(focusScore + 2, 100);
+                focusLabel.innerText = "FOCUSING";
+                focusLabel.className = "text-4xl font-black text-emerald-400 italic";
+                // วาดกรอบหน้า
+                for (const detection of results.detections) {
+                    drawRectangle(canvasCtx, detection.boundingBox, {color: '#3b82f6', lineWidth: 4});
+                }
+            } else {
+                focusScore = Math.max(focusScore - 5, 20);
+                focusLabel.innerText = "LOOK AT SCREEN!";
+                focusLabel.className = "text-4xl font-black text-rose-500 italic animate-pulse";
+            }
+            
+            // อัปเดตกราฟ
+            liveChart.data.datasets[0].data.push(focusScore);
+            liveChart.data.datasets[0].data.shift();
+            liveChart.update();
+            canvasCtx.restore();
+        }
+
+        const faceDetection = new FaceDetection({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`
+        });
+        faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.5 });
+        faceDetection.onResults(onResults);
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+                await faceDetection.send({image: videoElement});
+            },
+            width: 640, height: 480
+        });
+        camera.start();
+
+        // --- ระบบ QUIZ (Adaptive) ---
+        let currentLvl = 1;
+        let score = 0;
+        let answer = 0;
+
+        function newQuestion() {
+            let n1, n2;
+            if(currentLvl === 1) { 
+                n1 = Math.floor(Math.random()*15); n2 = Math.floor(Math.random()*15);
+                answer = n1 + n2; document.getElementById('q-text').innerText = `${n1} + ${n2} = ?`;
+                document.getElementById('level-badge').innerText = "LEVEL: EASY";
+            } else if(currentLvl === 2) {
+                n1 = Math.floor(Math.random()*50); n2 = Math.floor(Math.random()*40);
+                answer = n1 - n2; document.getElementById('q-text').innerText = `${n1} - ${n2} = ?`;
+                document.getElementById('level-badge').innerText = "LEVEL: MEDIUM";
+            } else {
+                n1 = Math.floor(Math.random()*12); n2 = Math.floor(Math.random()*12);
+                answer = n1 * n2; document.getElementById('q-text').innerText = `${n1} × ${n2} = ?`;
+                document.getElementById('level-badge').innerText = "LEVEL: HARD";
+            }
+        }
+
+        function handleQuizSubmit() {
+            const input = document.getElementById('q-input');
+            if(parseInt(input.value) === answer) {
+                score += 10;
+                currentLvl = score > 50 ? 3 : (score > 20 ? 2 : 1);
+                document.getElementById('score-val').innerText = score;
+                input.value = "";
+                newQuestion();
+            } else {
+                alert("คำตอบยังไม่ถูก ลองใหม่นะ!");
+            }
+        }
+        newQuestion();
+
+        // --- ระบบ CHAT ---
+        function sendChat() {
+            const inp = document.getElementById('chat-in');
+            const win = document.getElementById('chat-window');
+            if(!inp.value) return;
+
+            win.innerHTML += `<div class="bg-blue-600 p-4 rounded-2xl rounded-tr-none max-w-[80%] ml-auto text-sm text-white">${inp.value}</div>`;
+            
             setTimeout(() => {
-                let aiMsg = score > 40 
-                    ? `วิเคราะห์จากคะแนน ${score} ของคุณ คุณมีทักษะคณิตศาสตร์ที่ยอดเยี่ยม! แนะนำวิศวะหรือบัญชีครับ` 
-                    : `ดูเหมือนคุณจะถนัดการใช้ความคิดสร้างสรรค์มากกว่า ลองศึกษาด้านกราฟิกหรือนิเทศดูไหมครับ?`;
-                box.innerHTML += `<div class="bg-slate-800 p-4 rounded-2xl rounded-tl-none max-w-[85%] border border-slate-700 animate-pulse-once">${aiMsg}</div>`;
-                box.scrollTop = box.scrollHeight;
+                let aiResponse = score > 40 ? 
+                    `จากการวิเคราะห์คะแนนที่สูงถึง ${score} และสมาธิที่ค่อนข้างนิ่ง ผมแนะนำให้คุณลองมองคณะสายวิศวกรรมศาสตร์หรือวิทยาศาสตร์ข้อมูลครับ` :
+                    `คุณดูจะถนัดการแก้ไขปัญหาเฉพาะหน้าได้ดี แนะนำลองดูคณะบริหารธุรกิจหรือสายงานด้านการจัดการครับ`;
+                win.innerHTML += `<div class="bg-slate-700 p-4 rounded-2xl rounded-tl-none max-w-[80%] text-sm">AI: ${aiResponse}</div>`;
+                win.scrollTop = win.scrollHeight;
             }, 800);
             inp.value = "";
         }
