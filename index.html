@@ -27,6 +27,25 @@
             #sidebar { transform: translateX(-100%); }
             #sidebar.open { transform: translateX(0); }
         }
+
+        /* Floating Mode Style - ระบบหน้าต่างลอยจำลอง */
+        .floating-mode {
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            width: 260px !important;
+            height: auto !important;
+            z-index: 9999 !important;
+            border: 3px solid #3b82f6 !important;
+            border-radius: 20px !important;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
+            overflow: hidden;
+            cursor: move;
+            background: #0f172a;
+            touch-action: none; /* ป้องกันจอเลื่อนตอนลากบนมือถือ */
+        }
+        .floating-mode #loading-ai { display: none !important; }
+        .floating-mode #focus-label { font-size: 1rem !important; padding: 5px !important; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -41,7 +60,8 @@
     <aside id="sidebar" class="w-64 bg-slate-900 h-screen fixed left-0 top-0 flex-col p-6 border-r border-slate-800 z-50 flex">
         <h1 class="hidden md:block text-2xl font-bold text-blue-500 mb-10 tracking-tighter"><i class="fa-solid fa-bolt-lightning mr-2"></i>EDUSMART AI</h1>
         <nav class="space-y-3">
-            <button onclick="switchTab('monitor')" class="tab-btn w-full flex items-center p-4 rounded-xl bg-slate-800 text-white"><i class="fa-solid fa-face-smile mr-3"></i>AI Monitor</button>
+            <button onclick="switchTab('monitor')" class="tab-btn w-full flex items-center p-4 rounded-xl bg-slate-800 text-white"><i class="fa-solid fa-home mr-3"></i>Home</button>
+            <button onclick="switchTab('monitor')" class="tab-btn w-full flex items-center p-4 rounded-xl bg-slate-800 text-white"><i class="fa-solid fa-house mr-3"></i>Home</button>
             <button onclick="switchTab('classroom')" class="tab-btn w-full flex items-center p-4 rounded-xl hover:bg-slate-800 transition"><i class="fa-solid fa-book-open mr-3"></i>Classroom</button>
             <button onclick="switchTab('chat')" class="tab-btn w-full flex items-center p-4 rounded-xl hover:bg-slate-800 transition"><i class="fa-solid fa-comment-dots mr-3"></i>AI Counselor</button>
         </nav>
@@ -56,16 +76,16 @@
         <section id="monitor" class="tab-content active">
             <div class="mb-6">
                 <h2 class="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">AI FOCUS TRACKER</h2>
-                <p class="text-slate-400 text-sm italic">ระบบตรวจจับสายตา (ปรับจูนความไวแล้ว)</p>
+                <p class="text-slate-400 text-sm italic">ระบบตรวจจับโฟกัส (ปรับจูนความไวเพื่อวอสก้าแล้ว)</p>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 glass rounded-3xl overflow-hidden relative shadow-2xl min-h-[300px] md:min-h-[450px]">
+                <div id="camera-container" class="lg:col-span-2 glass rounded-3xl overflow-hidden relative shadow-2xl min-h-[300px] md:min-h-[450px]">
                     <video id="webcam" class="w-full h-full object-cover scale-x-[-1]" autoplay playsinline></video>
                     <canvas id="ai-canvas" class="w-full h-full scale-x-[-1]"></canvas>
                     <div id="loading-ai" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
                         <div class="text-center">
                             <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-2"></i>
-                            <p>กำลังจูนระบบ AI...</p>
+                            <p>กำลังโหลดกล้อง...</p>
                         </div>
                     </div>
                 </div>
@@ -87,24 +107,24 @@
                 <p class="text-slate-400 text-sm">เลือกวิชาที่ต้องการเรียน</p>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
-                <button onclick="showTopicList('physics')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-blue-600/20 border-b-4 border-blue-500 text-center transition-all group">
+                <button onclick="showTopicList('physics')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-blue-600/20 border-b-4 border-blue-500 text-center transition-all">
                     <i class="fa-solid fa-atom text-3xl md:text-4xl text-blue-500 mb-3"></i>
                     <p class="font-bold text-sm md:text-base">ฟิสิกส์</p>
                 </button>
-                <button onclick="showTopicList('chemistry')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-emerald-600/20 border-b-4 border-emerald-500 text-center transition-all group">
+                <button onclick="showTopicList('chemistry')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-emerald-600/20 border-b-4 border-emerald-500 text-center transition-all">
                     <i class="fa-solid fa-flask text-3xl md:text-4xl text-emerald-500 mb-3"></i>
                     <p class="font-bold text-sm md:text-base">เคมี</p>
                 </button>
-                <button onclick="showTopicList('biology')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-rose-600/20 border-b-4 border-rose-500 text-center transition-all group">
+                <button onclick="showTopicList('biology')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-rose-600/20 border-b-4 border-rose-500 text-center transition-all">
                     <i class="fa-solid fa-dna text-3xl md:text-4xl text-rose-500 mb-3"></i>
                     <p class="font-bold text-sm md:text-base">ชีวะ</p>
                 </button>
-                <button onclick="showTopicList('math')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-amber-600/20 border-b-4 border-amber-500 text-center transition-all group">
+                <button onclick="showTopicList('math')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-amber-600/20 border-b-4 border-amber-500 text-center transition-all">
                     <i class="fa-solid fa-calculator text-3xl md:text-4xl text-amber-500 mb-3"></i>
                     <p class="font-bold text-sm md:text-base">คณิตศาสตร์</p>
                 </button>
             </div>
-            <button onclick="enablePiP()" class="w-full bg-emerald-600 hover:bg-emerald-500 p-4 rounded-2xl flex items-center justify-center transition shadow-lg text-sm md:text-base">
+            <button onclick="enablePiP(event)" class="w-full bg-emerald-600 hover:bg-emerald-500 p-4 rounded-2xl flex items-center justify-center transition shadow-lg text-sm md:text-base">
                  <i class="fa-solid fa-window-restore mr-2"></i> เปิดโหมดหน้าจอลอย
             </button>
             <div id="topic-container" class="mt-8 glass p-6 rounded-[2rem] hidden border border-slate-700">
@@ -129,15 +149,12 @@
     </main>
 
     <script>
-        // --- Navigation Logic ---
+        // --- Navigation ---
         function toggleSidebar() {
-            const sb = document.getElementById('sidebar');
-            const overlay = document.getElementById('overlay');
-            const menuIcon = document.getElementById('menu-icon');
-            sb.classList.toggle('open');
-            overlay.classList.toggle('hidden');
-            menuIcon.classList.toggle('fa-bars');
-            menuIcon.classList.toggle('fa-xmark');
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('hidden');
+            const icon = document.getElementById('menu-icon');
+            icon.classList.toggle('fa-bars'); icon.classList.toggle('fa-xmark');
         }
 
         function switchTab(id) {
@@ -147,7 +164,7 @@
                 b.classList.remove('bg-slate-800', 'text-white');
                 if(b.getAttribute('onclick').includes(id)) b.classList.add('bg-slate-800', 'text-white');
             });
-            if (window.innerWidth < 768) toggleSidebar();
+            if (window.innerWidth < 768 && document.getElementById('sidebar').classList.contains('open')) toggleSidebar();
         }
 
         // --- AI MONITOR LOGIC ---
@@ -167,13 +184,9 @@
         function checkGaze(landmarks) {
             const leftIris = landmarks[468];
             if(!leftIris) return false;
-
-            // แก้ให้มองได้กว้างขึ้น (0.35 - 0.65) เพื่อลด Error บนมือถือหรือตอนขยับหน้า
+            // ปรับ Sensitivity: มองกว้างขึ้น (0.35 - 0.65) และหรี่ตาได้มากขึ้น (0.010)
             const isLookingCenter = (leftIris.x > 0.35 && leftIris.x < 0.65);
-            
-            // แก้ให้หรี่ตาได้มากขึ้น (0.010) ระบบไม่ด่าว่าหลับตา
             const eyeOpenStatus = (landmarks[145].y - landmarks[159].y) > 0.010;
-
             return isLookingCenter && eyeOpenStatus;
         }
 
@@ -181,18 +194,16 @@
             document.getElementById('loading-ai').style.display = 'none';
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-
             if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
                 const landmarks = results.multiFaceLandmarks[0];
                 const isFocusing = checkGaze(landmarks);
-
                 if (isFocusing) {
                     focusScore = Math.min(focusScore + 0.5, 100);
-                    focusLabel.innerText = "ตากำลังโฟกัส";
+                    focusLabel.innerText = "กำลังตั้งใจเรียน";
                     focusLabel.className = "text-2xl md:text-3xl font-black text-emerald-400 italic";
                 } else {
                     focusScore = Math.max(focusScore - 1, 0);
-                    focusLabel.innerText = "มองจอหน่อยวอสก้า!";
+                    focusLabel.innerText = "ตั้งใจเรียนหน่อยครับ";
                     focusLabel.className = "text-2xl md:text-3xl font-black text-rose-500 italic animate-pulse";
                 }
             } else {
@@ -220,14 +231,56 @@
         });
         camera.start();
 
-        // --- Subjects Data & Chat (คงเดิม) ---
+        // --- Floating Window Logic (ระบบลากหน้าจอ) ---
+        let isFloating = false;
+        function enablePiP(event) {
+            const videoContainer = document.getElementById('camera-container');
+            if (!isFloating) {
+                videoContainer.classList.add('floating-mode');
+                makeDraggable(videoContainer);
+                isFloating = true;
+                event.currentTarget.innerHTML = '<i class="fa-solid fa-compress mr-2"></i> เก็บหน้าต่างลอย';
+            } else {
+                videoContainer.classList.remove('floating-mode');
+                videoContainer.style.top = null; videoContainer.style.left = null;
+                videoContainer.onmousedown = null; videoContainer.ontouchstart = null;
+                isFloating = false;
+                event.currentTarget.innerHTML = '<i class="fa-solid fa-window-restore mr-2"></i> เปิดโหมดหน้าจอลอย';
+            }
+        }
+
+        function makeDraggable(el) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            el.onmousedown = dragMouseDown; el.ontouchstart = dragMouseDown;
+            function dragMouseDown(e) {
+                e = e || window.event;
+                pos3 = e.clientX || e.touches[0].clientX;
+                pos4 = e.clientY || e.touches[0].clientY;
+                document.onmouseup = closeDragElement; document.ontouchend = closeDragElement;
+                document.onmousemove = elementDrag; document.ontouchmove = elementDrag;
+            }
+            function elementDrag(e) {
+                e = e || window.event;
+                let clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+                let clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+                pos1 = pos3 - clientX; pos2 = pos4 - clientY;
+                pos3 = clientX; pos4 = clientY;
+                el.style.top = (el.offsetTop - pos2) + "px";
+                el.style.left = (el.offsetLeft - pos1) + "px";
+            }
+            function closeDragElement() {
+                document.onmouseup = null; document.onmousemove = null;
+                document.ontouchend = null; document.ontouchmove = null;
+            }
+        }
+
+        // --- Classroom & Chat ---
         const topicsData = {
             physics: { name: "ฟิสิกส์", color: "blue", items: ["การเคลื่อนที่", "แรงและกฎการเคลื่อนที่", "งานและพลังงาน"] },
             chemistry: { name: "เคมี", color: "emerald", items: ["อะตอมและตารางธาตุ", "พันธะเคมี", "ปริมาณสารสัมพันธ์"] },
             biology: { name: "ชีวะ", color: "rose", items: ["เซลล์", "การแบ่งเซลล์", "การย่อยอาหาร"] },
             math: { name: "คณิตศาสตร์", color: "amber", items: ["เซต", "ตรรกศาสตร์", "จำนวนจริง"] }
         };
-
         function showTopicList(key) {
             const data = topicsData[key];
             const list = document.getElementById('topic-list');
@@ -245,9 +298,6 @@
             if(!inp.value.trim()) return;
             document.getElementById('chat-window').innerHTML += `<div class="flex justify-end mb-2"><div class="bg-blue-600 p-3 rounded-xl text-sm">${inp.value}</div></div>`;
             inp.value = "";
-        }
-        async function enablePiP() {
-            try { await videoElement.requestPictureInPicture(); } catch (e) { alert("อุปกรณ์ของคุณไม่รองรับ PiP"); }
         }
     </script>
 </body>
