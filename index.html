@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
 
@@ -54,7 +54,7 @@
                 <div class="space-y-6">
                     <div class="glass p-6 rounded-3xl text-center">
                         <p class="text-slate-400 uppercase text-xs tracking-widest mb-2">Focus Status</p>
-                        <h3 id="focus-label" class="text-4xl font-black text-slate-500 italic">WAITING...</h3>
+                        <h3 id="focus-label" class="text-4xl font-black text-slate-500 italic">กำลังโหลด...</h3>
                     </div>
                     <div class="glass p-6 rounded-3xl h-64">
                         <canvas id="liveChart"></canvas>
@@ -178,52 +178,82 @@
             document.getElementById('topic-container').classList.add('hidden');
         }
 
-        // --- AI MONITOR LOGIC ---
+        // --- AI EYE MONITOR LOGIC (NEW VERSION) ---
         const videoElement = document.getElementById('webcam');
         const canvasElement = document.getElementById('ai-canvas');
         const canvasCtx = canvasElement.getContext('2d');
         const focusLabel = document.getElementById('focus-label');
         let focusScore = 80;
 
-        const chartCtx = document.getElementById('liveChart').getContext('2d');
-        const liveChart = new Chart(chartCtx, {
-            type: 'line',
-            data: { labels: ['', '', '', '', '', '', '', '', '', ''], datasets: [{ label: 'Focus', data: [80,80,80,80,80,80,80,80,80,80], borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)', pointRadius: 0 }] },
-            options: { plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, display: false }, x: { display: false } } }
-        });
+        // ฟังก์ชันคำนวณว่าตากำลังมองตรงอยู่ไหม
+        function checkGaze(landmarks) {
+            // จุดที่ 468 คือตาดำข้างซ้าย, 473 คือตาดำข้างขวา
+            const leftIris = landmarks[468];
+            const rightIris = landmarks[473];
+    
+            // คำนวณตำแหน่งตาดำเทียบกับค่ากึ่งกลาง (ค่า x ประมาณ 0.5 คือมองตรง)
+            // ถ้าวอสก้าเหลือบตาไปซ้ายหรือขวามากเกินไป (เช่น < 0.4 หรือ > 0.6) แสดงว่าหลุดโฟกัส
+            const isLookingCenter = (leftIris.x > 0.42 && leftIris.x < 0.58);
+    
+            // ตรวจสอบการลืมตา (ใช้จุดหนังตาบนและล่าง)
+            const leftEyeUpper = landmarks[159].y;
+            const leftEyeLower = landmarks[145].y;
+            const eyeOpenStatus = (leftEyeLower - leftEyeUpper) > 0.015; // ถ้าค่าน้อยเกินแสดงว่าหลับตา
+
+        return isLookingCenter && eyeOpenStatus;
+    }
 
         function onResults(results) {
             document.getElementById('loading-ai').style.display = 'none';
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            if (results.detections.length > 0) {
-                focusScore = Math.min(focusScore + 2, 100);
-                focusLabel.innerText = "FOCUSING";
-                focusLabel.className = "text-4xl font-black text-emerald-400 italic";
-            } else {
-                focusScore = Math.max(focusScore - 5, 20);
-                focusLabel.innerText = "WAITING...";
-                focusLabel.className = "text-4xl font-black text-slate-500 italic";
-            }
-            liveChart.data.datasets[0].data.push(focusScore);
-            liveChart.data.datasets[0].data.shift();
-            liveChart.update();
-            canvasCtx.restore();
+
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            const landmarks = results.multiFaceLandmarks[0];
+            const isFocusing = checkGaze(landmarks);
+
+        if (isFocusing) {
+            focusScore = Math.min(focusScore + 1, 100);
+            focusLabel.innerText = "ตากำลังโฟกัส";
+            focusLabel.className = "text-4xl font-black text-emerald-400 italic";
+        } else {
+            focusScore = Math.max(focusScore - 2, 0);
+            focusLabel.innerText = "มองจอหน่อยวอสก้า!";
+            focusLabel.className = "text-4xl font-black text-rose-500 italic animate-pulse";
         }
+    } else {
+        // กรณีไม่เห็นหน้า/ไม่เห็นตา
+        focusScore = Math.max(focusScore - 5, 0);
+        focusLabel.innerText = "ไม่พบดวงตา";
+        focusLabel.className = "text-4xl font-black text-slate-500 italic";
+    }
 
-        const faceDetection = new FaceDetection({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${f}` });
-        faceDetection.setOptions({ model: 'short', minDetectionConfidence: 0.5 });
-        faceDetection.onResults(onResults);
+    liveChart.data.datasets[0].data.push(focusScore);
+    liveChart.data.datasets[0].data.shift();
+    liveChart.update();
+    canvasCtx.restore();
+}
 
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                canvasElement.width = videoElement.videoWidth;
-                canvasElement.height = videoElement.videoHeight;
-                await faceDetection.send({image: videoElement});
-            },
-            width: 640, height: 480
-        });
-        camera.start();
+        // ตั้งค่า Face Mesh (จับจุดละเอียด 478 จุด)
+    const faceMesh = new FaceMesh({
+    locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`
+    });
+
+    faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true, // ตัวนี้สำคัญมาก! ต้องเปิดเพื่อให้จับจุดลูกตาดำได้
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+    });
+    faceMesh.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+        onFrame: async () => {
+            await faceMesh.send({image: videoElement});
+    },
+        width: 640, height: 480
+    });
+    camera.start();
 
         async function sendChat() {
             const inp = document.getElementById('chat-in');
