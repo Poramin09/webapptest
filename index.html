@@ -28,7 +28,7 @@
             #sidebar.open { transform: translateX(0); }
         }
 
-        /* Floating Mode Style - ระบบหน้าต่างลอยจำลอง */
+        /* Floating Mode Style - ของเดิมยังอยู่เผื่อใช้ในอนาคต */
         .floating-mode {
             position: fixed !important;
             bottom: 20px !important;
@@ -40,12 +40,8 @@
             border-radius: 20px !important;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
             overflow: hidden;
-            cursor: move;
             background: #0f172a;
-            touch-action: none; /* ป้องกันจอเลื่อนตอนลากบนมือถือ */
         }
-        .floating-mode #loading-ai { display: none !important; }
-        .floating-mode #focus-label { font-size: 1rem !important; padding: 5px !important; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -61,13 +57,10 @@
         <h1 class="hidden md:block text-2xl font-bold text-blue-500 mb-10 tracking-tighter"><i class="fa-solid fa-bolt-lightning mr-2"></i>EDUSMART AI</h1>
         <nav class="space-y-3">
             <button onclick="switchTab('monitor')" class="tab-btn w-full flex items-center p-4 rounded-xl bg-slate-800 text-white"><i class="fa-solid fa-home mr-3"></i>Home</button>
-            <button onclick="switchTab('monitor')" class="tab-btn w-full flex items-center p-4 rounded-xl bg-slate-800 text-white"><i class="fa-solid fa-house mr-3"></i>Home</button>
+            <button onclick="switchTab('monitor')" class="tab-btn w-full flex items-center p-4 rounded-xl bg-slate-800 text-white"><i class="fa-solid fa-robot mr-3"></i>AI Focus Tracker</button>
             <button onclick="switchTab('classroom')" class="tab-btn w-full flex items-center p-4 rounded-xl hover:bg-slate-800 transition"><i class="fa-solid fa-book-open mr-3"></i>Classroom</button>
             <button onclick="switchTab('chat')" class="tab-btn w-full flex items-center p-4 rounded-xl hover:bg-slate-800 transition"><i class="fa-solid fa-comment-dots mr-3"></i>AI Counselor</button>
         </nav>
-        <div class="mt-auto pt-6 border-t border-slate-800 md:hidden">
-             <button onclick="toggleSidebar()" class="w-full p-3 bg-slate-800 rounded-xl text-slate-400 text-sm">ปิดเมนู</button>
-        </div>
     </aside>
 
     <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
@@ -76,7 +69,7 @@
         <section id="monitor" class="tab-content active">
             <div class="mb-6">
                 <h2 class="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">AI FOCUS TRACKER</h2>
-                <p class="text-slate-400 text-sm italic">ระบบตรวจจับโฟกัส (ปรับจูนความไวเพื่อวอสก้าแล้ว)</p>
+                <p class="text-slate-400 text-sm italic">ระบบตรวจจับโฟกัส </p>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div id="camera-container" class="lg:col-span-2 glass rounded-3xl overflow-hidden relative shadow-2xl min-h-[300px] md:min-h-[450px]">
@@ -184,7 +177,6 @@
         function checkGaze(landmarks) {
             const leftIris = landmarks[468];
             if(!leftIris) return false;
-            // ปรับ Sensitivity: มองกว้างขึ้น (0.35 - 0.65) และหรี่ตาได้มากขึ้น (0.010)
             const isLookingCenter = (leftIris.x > 0.35 && leftIris.x < 0.65);
             const eyeOpenStatus = (landmarks[145].y - landmarks[159].y) > 0.010;
             return isLookingCenter && eyeOpenStatus;
@@ -231,48 +223,36 @@
         });
         camera.start();
 
-        // --- Floating Window Logic (ระบบลากหน้าจอ) ---
-        let isFloating = false;
-        function enablePiP(event) {
-            const videoContainer = document.getElementById('camera-container');
-            if (!isFloating) {
-                videoContainer.classList.add('floating-mode');
-                makeDraggable(videoContainer);
-                isFloating = true;
-                event.currentTarget.innerHTML = '<i class="fa-solid fa-compress mr-2"></i> เก็บหน้าต่างลอย';
-            } else {
-                videoContainer.classList.remove('floating-mode');
-                videoContainer.style.top = null; videoContainer.style.left = null;
-                videoContainer.onmousedown = null; videoContainer.ontouchstart = null;
-                isFloating = false;
-                event.currentTarget.innerHTML = '<i class="fa-solid fa-window-restore mr-2"></i> เปิดโหมดหน้าจอลอย';
+        // --- Native PiP Logic (แก้ไขเพื่อให้ลอยไปแท็บอื่นได้จริง) ---
+        async function enablePiP(event) {
+            try {
+                if (!document.pictureInPictureEnabled) {
+                    alert("เบราว์เซอร์นี้ไม่รองรับระบบหน้าต่างลอยครับ");
+                    return;
+                }
+                if (document.pictureInPictureElement) {
+                    await document.exitPictureInPicture();
+                } else {
+                    if (videoElement.readyState >= 2) {
+                        await videoElement.requestPictureInPicture();
+                    } else {
+                        alert("กำลังรอให้กล้องโหลดภาพขึ้นมา...");
+                    }
+                }
+            } catch (error) {
+                console.error("PiP Error:", error);
             }
         }
 
-        function makeDraggable(el) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            el.onmousedown = dragMouseDown; el.ontouchstart = dragMouseDown;
-            function dragMouseDown(e) {
-                e = e || window.event;
-                pos3 = e.clientX || e.touches[0].clientX;
-                pos4 = e.clientY || e.touches[0].clientY;
-                document.onmouseup = closeDragElement; document.ontouchend = closeDragElement;
-                document.onmousemove = elementDrag; document.ontouchmove = elementDrag;
-            }
-            function elementDrag(e) {
-                e = e || window.event;
-                let clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
-                let clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
-                pos1 = pos3 - clientX; pos2 = pos4 - clientY;
-                pos3 = clientX; pos4 = clientY;
-                el.style.top = (el.offsetTop - pos2) + "px";
-                el.style.left = (el.offsetLeft - pos1) + "px";
-            }
-            function closeDragElement() {
-                document.onmouseup = null; document.onmousemove = null;
-                document.ontouchend = null; document.ontouchmove = null;
-            }
-        }
+        videoElement.addEventListener('enterpictureinpicture', () => {
+            const btn = document.querySelector('button[onclick="enablePiP(event)"]');
+            if(btn) btn.innerHTML = '<i class="fa-solid fa-compress mr-2"></i> เก็บหน้าต่างลอย';
+        });
+
+        videoElement.addEventListener('leavepictureinpicture', () => {
+            const btn = document.querySelector('button[onclick="enablePiP(event)"]');
+            if(btn) btn.innerHTML = '<i class="fa-solid fa-window-restore mr-2"></i> เปิดโหมดหน้าจอลอย';
+        });
 
         // --- Classroom & Chat ---
         const topicsData = {
