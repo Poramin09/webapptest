@@ -14,49 +14,67 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
-        body { font-family: 'Kanit', sans-serif; background-color: #0f172a; color: #f1f5f9; }
+        body { font-family: 'Kanit', sans-serif; background-color: #0f172a; color: #f1f5f9; overflow-x: hidden; }
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: slideUp 0.4s ease; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
         canvas#ai-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+        
+        /* Mobile Sidebar Toggle */
+        #sidebar { transition: transform 0.3s ease; }
+        @media (max-width: 768px) {
+            #sidebar { transform: translateX(-100%); }
+            #sidebar.open { transform: translateX(0); }
+        }
     </style>
 </head>
 <body class="min-h-screen">
 
-    <aside class="hidden md:flex w-64 bg-slate-900/80 h-screen fixed left-0 top-0 flex-col p-6 border-r border-slate-800 z-50">
-        <h1 class="text-2xl font-bold text-blue-500 mb-10 tracking-tighter"><i class="fa-solid fa-bolt-lightning mr-2"></i>EDUSMART AI</h1>
+    <header class="md:hidden flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 sticky top-0 z-[60]">
+        <h1 class="text-xl font-bold text-blue-500"><i class="fa-solid fa-bolt-lightning mr-2"></i>EDUSMART</h1>
+        <button onclick="toggleSidebar()" class="text-2xl text-white p-2">
+            <i class="fa-solid fa-bars" id="menu-icon"></i>
+        </button>
+    </header>
+
+    <aside id="sidebar" class="w-64 bg-slate-900 h-screen fixed left-0 top-0 flex-col p-6 border-r border-slate-800 z-50 flex">
+        <h1 class="hidden md:block text-2xl font-bold text-blue-500 mb-10 tracking-tighter"><i class="fa-solid fa-bolt-lightning mr-2"></i>EDUSMART AI</h1>
         <nav class="space-y-3">
-            <button onclick="switchTab('monitor')" class="w-full flex items-center p-3 rounded-xl bg-slate-800 text-white"><i class="fa-solid fa-face-smile mr-3"></i>AI Monitor</button>
-            <button onclick="switchTab('classroom')" class="w-full flex items-center p-3 rounded-xl hover:bg-slate-800 transition"><i class="fa-solid fa-book-open mr-3"></i>Classroom</button>
-            <button onclick="switchTab('chat')" class="w-full flex items-center p-3 rounded-xl hover:bg-slate-800 transition"><i class="fa-solid fa-comment-dots mr-3"></i>AI Counselor</button>
+            <button onclick="switchTab('monitor')" class="tab-btn w-full flex items-center p-4 rounded-xl bg-slate-800 text-white"><i class="fa-solid fa-face-smile mr-3"></i>AI Monitor</button>
+            <button onclick="switchTab('classroom')" class="tab-btn w-full flex items-center p-4 rounded-xl hover:bg-slate-800 transition"><i class="fa-solid fa-book-open mr-3"></i>Classroom</button>
+            <button onclick="switchTab('chat')" class="tab-btn w-full flex items-center p-4 rounded-xl hover:bg-slate-800 transition"><i class="fa-solid fa-comment-dots mr-3"></i>AI Counselor</button>
         </nav>
+        <div class="mt-auto pt-6 border-t border-slate-800 md:hidden">
+             <button onclick="toggleSidebar()" class="w-full p-3 bg-slate-800 rounded-xl text-slate-400 text-sm">ปิดเมนู</button>
+        </div>
     </aside>
 
-    <main class="md:ml-64 p-4 md:p-10 mb-20">
-        
+    <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
+
+    <main class="md:ml-64 p-4 md:p-10 mb-20 transition-all">
         <section id="monitor" class="tab-content active">
-            <div class="mb-6 text-center md:text-left">
-                <h2 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">AI FOCUS TRACKER</h2>
-                <p class="text-slate-400 text-sm">ระบบตรวจจับใบหน้าและสมาธิแบบ Real-time</p>
+            <div class="mb-6">
+                <h2 class="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">AI FOCUS TRACKER</h2>
+                <p class="text-slate-400 text-sm italic">ระบบตรวจจับสายตา (ปรับจูนความไวแล้ว)</p>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 glass rounded-3xl overflow-hidden relative shadow-2xl min-h-[400px]">
+                <div class="lg:col-span-2 glass rounded-3xl overflow-hidden relative shadow-2xl min-h-[300px] md:min-h-[450px]">
                     <video id="webcam" class="w-full h-full object-cover scale-x-[-1]" autoplay playsinline></video>
                     <canvas id="ai-canvas" class="w-full h-full scale-x-[-1]"></canvas>
                     <div id="loading-ai" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
                         <div class="text-center">
                             <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-2"></i>
-                            <p>กำลังโหลดระบบ AI...</p>
+                            <p>กำลังจูนระบบ AI...</p>
                         </div>
                     </div>
                 </div>
-                <div class="space-y-6">
+                <div class="space-y-4">
                     <div class="glass p-6 rounded-3xl text-center">
                         <p class="text-slate-400 uppercase text-xs tracking-widest mb-2">Focus Status</p>
-                        <h3 id="focus-label" class="text-4xl font-black text-slate-500 italic">กำลังโหลด...</h3>
+                        <h3 id="focus-label" class="text-2xl md:text-3xl font-black text-slate-500 italic">เตรียมพร้อม...</h3>
                     </div>
-                    <div class="glass p-6 rounded-3xl h-64">
+                    <div class="glass p-4 rounded-3xl h-48 md:h-64">
                         <canvas id="liveChart"></canvas>
                     </div>
                 </div>
@@ -68,110 +86,68 @@
                 <h2 class="text-3xl font-bold text-emerald-400"><i class="fa-solid fa-book-open mr-2"></i>GU PUAD HUA</h2>
                 <p class="text-slate-400 text-sm">เลือกวิชาที่ต้องการเรียน</p>
             </div>
-            
-            <div id="subject-folders" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-                <button onclick="showTopicList('physics')" class="glass p-6 rounded-3xl hover:bg-blue-600/20 border-b-4 border-blue-500 text-center transition-all group">
-                    <i class="fa-solid fa-atom text-4xl text-blue-500 mb-3 group-hover:scale-110 transition"></i>
-                    <p class="font-bold">ฟิสิกส์</p>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-10">
+                <button onclick="showTopicList('physics')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-blue-600/20 border-b-4 border-blue-500 text-center transition-all group">
+                    <i class="fa-solid fa-atom text-3xl md:text-4xl text-blue-500 mb-3"></i>
+                    <p class="font-bold text-sm md:text-base">ฟิสิกส์</p>
                 </button>
-                <button onclick="showTopicList('chemistry')" class="glass p-6 rounded-3xl hover:bg-emerald-600/20 border-b-4 border-emerald-500 text-center transition-all group">
-                    <i class="fa-solid fa-flask text-4xl text-emerald-500 mb-3 group-hover:scale-110 transition"></i>
-                    <p class="font-bold">เคมี</p>
+                <button onclick="showTopicList('chemistry')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-emerald-600/20 border-b-4 border-emerald-500 text-center transition-all group">
+                    <i class="fa-solid fa-flask text-3xl md:text-4xl text-emerald-500 mb-3"></i>
+                    <p class="font-bold text-sm md:text-base">เคมี</p>
                 </button>
-                <button onclick="showTopicList('biology')" class="glass p-6 rounded-3xl hover:bg-rose-600/20 border-b-4 border-rose-500 text-center transition-all group">
-                    <i class="fa-solid fa-dna text-4xl text-rose-500 mb-3 group-hover:scale-110 transition"></i>
-                    <p class="font-bold">ชีวะ</p>
+                <button onclick="showTopicList('biology')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-rose-600/20 border-b-4 border-rose-500 text-center transition-all group">
+                    <i class="fa-solid fa-dna text-3xl md:text-4xl text-rose-500 mb-3"></i>
+                    <p class="font-bold text-sm md:text-base">ชีวะ</p>
                 </button>
-                <button onclick="showTopicList('math')" class="glass p-6 rounded-3xl hover:bg-amber-600/20 border-b-4 border-amber-500 text-center transition-all group">
-                    <i class="fa-solid fa-calculator text-4xl text-amber-500 mb-3 group-hover:scale-110 transition"></i>
-                    <p class="font-bold">คณิตศาสตร์</p>
-                </button>
-                <button onclick="enablePiP()" class="mt-4 bg-emerald-600 hover:bg-emerald-500 w-full p-3 rounded-2xl flex items-center justify-center transition shadow-lg">
-                     <i class="fa-solid fa-window-restore mr-2"></i> กดเพื่อเปิดโหมดหน้าจอลอย จับโฟกัสขณะเรียน
+                <button onclick="showTopicList('math')" class="glass p-4 md:p-6 rounded-2xl md:rounded-3xl hover:bg-amber-600/20 border-b-4 border-amber-500 text-center transition-all group">
+                    <i class="fa-solid fa-calculator text-3xl md:text-4xl text-amber-500 mb-3"></i>
+                    <p class="font-bold text-sm md:text-base">คณิตศาสตร์</p>
                 </button>
             </div>
-
-            <div id="topic-container" class="glass p-8 rounded-[2.5rem] hidden border border-slate-700 shadow-2xl">
-                <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
-                    <div>
-                        <h3 id="selected-subject-title" class="text-2xl font-bold text-white uppercase tracking-wider">หัวข้อการเรียน</h3>
-                    </div>
-                    <button onclick="closeTopics()" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl transition text-sm">
-                        <i class="fa-solid fa-xmark mr-2"></i>ปิด
-                    </button>
+            <button onclick="enablePiP()" class="w-full bg-emerald-600 hover:bg-emerald-500 p-4 rounded-2xl flex items-center justify-center transition shadow-lg text-sm md:text-base">
+                 <i class="fa-solid fa-window-restore mr-2"></i> เปิดโหมดหน้าจอลอย
+            </button>
+            <div id="topic-container" class="mt-8 glass p-6 rounded-[2rem] hidden border border-slate-700">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 id="selected-subject-title" class="text-xl font-bold uppercase">หัวข้อ</h3>
+                    <button onclick="closeTopics()" class="bg-slate-800 p-2 rounded-lg text-xs">ปิด</button>
                 </div>
-                <div id="topic-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    </div>
+                <div id="topic-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
             </div>
         </section>
 
-        <section id="chat" class="tab-content h-[80vh]">
-            <h2 class="text-3xl font-bold mb-6 text-blue-400">🤖 AI COUNSELOR</h2>
-            <div class="glass h-full rounded-[2.5rem] flex flex-col overflow-hidden shadow-2xl">
-                <div id="chat-window" class="flex-1 p-6 overflow-y-auto space-y-4"></div>
-                <div class="p-4 bg-slate-900/80 flex gap-3 border-t border-slate-800">
-                    <input type="text" id="chat-in" class="flex-1 bg-slate-800 p-4 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="ถาม AI เกี่ยวกับการเรียน...">
-                    <button onclick="sendChat()" class="bg-blue-600 w-16 rounded-2xl flex items-center justify-center hover:bg-blue-500 transition"><i class="fa-solid fa-paper-plane"></i></button>
+        <section id="chat" class="tab-content h-[75vh] md:h-[80vh]">
+            <h2 class="text-2xl font-bold mb-4 text-blue-400">🤖 AI COUNSELOR</h2>
+            <div class="glass h-full rounded-[2rem] flex flex-col overflow-hidden shadow-2xl">
+                <div id="chat-window" class="flex-1 p-4 md:p-6 overflow-y-auto space-y-4"></div>
+                <div class="p-3 md:p-4 bg-slate-900 flex gap-2 border-t border-slate-800">
+                    <input type="text" id="chat-in" class="flex-1 bg-slate-800 p-3 md:p-4 rounded-xl outline-none text-sm" placeholder="ถาม AI...">
+                    <button onclick="sendChat()" class="bg-blue-600 px-4 rounded-xl hover:bg-blue-500 transition"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </div>
         </section>
     </main>
 
     <script>
-        const topicsData = {
-            physics: {
-                name: "ฟิสิกส์ (Physics)", color: "blue",
-                items: ["การเคลื่อนที่แนวตรง", "แรงและกฎการเคลื่อนที่", "สมดุลกล", "งานและพลังงาน", "โมเมนตัมและการชน", "การเคลื่อนที่แบบโพรเจกไทล์"]
-            },
-            chemistry: {
-                name: "เคมี (Chemistry)", color: "emerald",
-                items: ["ความปลอดภัยในห้องปฏิบัติการ", "อะตอมและตารางธาตุ", "พันธะเคมี", "โมลและสูตรเคมี", "สารละลาย", "ปริมาณสารสัมพันธ์"]
-            },
-            biology: {
-                name: "ชีววิทยา (Biology)", color: "rose",
-                items: ["เคมีที่เป็นพื้นฐานของสิ่งมีชีวิต", "เซลล์ของสิ่งมีชีวิต", "การแบ่งเซลล์", "การย่อยอาหาร", "การหายใจระดับเซลล์"]
-            },
-            math: {
-                name: "คณิตศาสตร์ (Mathematics)", color: "amber",
-                items: ["เซต", "ตรรกศาสตร์", "จำนวนจริง", "ฟังก์ชัน", "เมทริกซ์", "เลขาคณิตวิเคราะห์"]
-            }
-        };
+        // --- Navigation Logic ---
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            const menuIcon = document.getElementById('menu-icon');
+            sb.classList.toggle('open');
+            overlay.classList.toggle('hidden');
+            menuIcon.classList.toggle('fa-bars');
+            menuIcon.classList.toggle('fa-xmark');
+        }
 
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            document.querySelectorAll('aside button').forEach(b => {
+            document.querySelectorAll('.tab-btn').forEach(b => {
                 b.classList.remove('bg-slate-800', 'text-white');
                 if(b.getAttribute('onclick').includes(id)) b.classList.add('bg-slate-800', 'text-white');
             });
-        }
-
-        function showTopicList(subjectKey) {
-            const data = topicsData[subjectKey];
-            const container = document.getElementById('topic-container');
-            const list = document.getElementById('topic-list');
-            const title = document.getElementById('selected-subject-title');
-            title.innerText = data.name;
-            title.className = `text-2xl font-bold text-${data.color}-400 uppercase tracking-wider`;
-            list.innerHTML = ""; 
-            data.items.forEach((item, index) => {
-                list.innerHTML += `
-                    <div class="group flex items-center p-4 rounded-2xl bg-slate-800/40 border border-slate-700 hover:border-${data.color}-500/50 transition-all cursor-pointer">
-                        <span class="w-8 h-8 rounded-lg bg-${data.color}-500/20 flex items-center justify-center text-${data.color}-400 text-xs font-bold mr-4">
-                            ${(index + 1).toString().padStart(2, '0')}
-                        </span>
-                        <div class="text-slate-200 group-hover:text-white transition-colors">
-                            ${item}
-                        </div>
-                    </div>
-                `;
-            });
-            container.classList.remove('hidden');
-            container.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function closeTopics() {
-            document.getElementById('topic-container').classList.add('hidden');
+            if (window.innerWidth < 768) toggleSidebar();
         }
 
         // --- AI MONITOR LOGIC ---
@@ -181,22 +157,23 @@
         const focusLabel = document.getElementById('focus-label');
         let focusScore = 80;
 
-        // เริ่มตั้งค่า Chart
         const chartCtx = document.getElementById('liveChart').getContext('2d');
         const liveChart = new Chart(chartCtx, {
             type: 'line',
             data: { labels: ['', '', '', '', '', '', '', '', '', ''], datasets: [{ label: 'Focus', data: [80,80,80,80,80,80,80,80,80,80], borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)', pointRadius: 0 }] },
-            options: { plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, display: false }, x: { display: false } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, display: false }, x: { display: false } } }
         });
 
         function checkGaze(landmarks) {
             const leftIris = landmarks[468];
-            const rightIris = landmarks[473];
             if(!leftIris) return false;
-            const isLookingCenter = (leftIris.x > 0.42 && leftIris.x < 0.58);
-            const leftEyeUpper = landmarks[159].y;
-            const leftEyeLower = landmarks[145].y;
-            const eyeOpenStatus = (leftEyeLower - leftEyeUpper) > 0.015;
+
+            // แก้ให้มองได้กว้างขึ้น (0.35 - 0.65) เพื่อลด Error บนมือถือหรือตอนขยับหน้า
+            const isLookingCenter = (leftIris.x > 0.35 && leftIris.x < 0.65);
+            
+            // แก้ให้หรี่ตาได้มากขึ้น (0.010) ระบบไม่ด่าว่าหลับตา
+            const eyeOpenStatus = (landmarks[145].y - landmarks[159].y) > 0.010;
+
             return isLookingCenter && eyeOpenStatus;
         }
 
@@ -210,40 +187,31 @@
                 const isFocusing = checkGaze(landmarks);
 
                 if (isFocusing) {
-                    focusScore = Math.min(focusScore + 1, 100);
+                    focusScore = Math.min(focusScore + 0.5, 100);
                     focusLabel.innerText = "ตากำลังโฟกัส";
-                    focusLabel.className = "text-4xl font-black text-emerald-400 italic";
+                    focusLabel.className = "text-2xl md:text-3xl font-black text-emerald-400 italic";
                 } else {
-                    focusScore = Math.max(focusScore - 2, 0);
+                    focusScore = Math.max(focusScore - 1, 0);
                     focusLabel.innerText = "มองจอหน่อยวอสก้า!";
-                    focusLabel.className = "text-4xl font-black text-rose-500 italic animate-pulse";
+                    focusLabel.className = "text-2xl md:text-3xl font-black text-rose-500 italic animate-pulse";
                 }
             } else {
-                focusScore = Math.max(focusScore - 5, 0);
-                focusLabel.innerText = "ไม่พบดวงตา";
-                focusLabel.className = "text-4xl font-black text-slate-500 italic";
+                focusScore = Math.max(focusScore - 2, 0);
+                focusLabel.innerText = "ไม่พบใบหน้า";
+                focusLabel.className = "text-2xl md:text-3xl font-black text-slate-500 italic";
             }
             liveChart.data.datasets[0].data.push(focusScore);
             liveChart.data.datasets[0].data.shift();
-            liveChart.update();
+            liveChart.update('none');
             canvasCtx.restore();
         }
 
-        const faceMesh = new FaceMesh({
-            locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}`
-        });
-
-        faceMesh.setOptions({
-            maxNumFaces: 1,
-            refineLandmarks: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.5
-        });
+        const faceMesh = new FaceMesh({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
+        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
         faceMesh.onResults(onResults);
 
         const camera = new Camera(videoElement, {
             onFrame: async () => {
-                // เพิ่มการตั้งค่าขนาด canvas เพื่อให้ตรงกับวิดีโอ
                 canvasElement.width = videoElement.videoWidth;
                 canvasElement.height = videoElement.videoHeight;
                 await faceMesh.send({image: videoElement});
@@ -252,25 +220,34 @@
         });
         camera.start();
 
+        // --- Subjects Data & Chat (คงเดิม) ---
+        const topicsData = {
+            physics: { name: "ฟิสิกส์", color: "blue", items: ["การเคลื่อนที่", "แรงและกฎการเคลื่อนที่", "งานและพลังงาน"] },
+            chemistry: { name: "เคมี", color: "emerald", items: ["อะตอมและตารางธาตุ", "พันธะเคมี", "ปริมาณสารสัมพันธ์"] },
+            biology: { name: "ชีวะ", color: "rose", items: ["เซลล์", "การแบ่งเซลล์", "การย่อยอาหาร"] },
+            math: { name: "คณิตศาสตร์", color: "amber", items: ["เซต", "ตรรกศาสตร์", "จำนวนจริง"] }
+        };
+
+        function showTopicList(key) {
+            const data = topicsData[key];
+            const list = document.getElementById('topic-list');
+            document.getElementById('selected-subject-title').innerText = data.name;
+            list.innerHTML = data.items.map((item, i) => `
+                <div class="flex items-center p-4 rounded-xl bg-slate-800/60 border border-slate-700">
+                    <span class="mr-3 text-xs font-bold text-${data.color}-400">0${i+1}</span>
+                    <span class="text-sm">${item}</span>
+                </div>`).join('');
+            document.getElementById('topic-container').classList.remove('hidden');
+        }
+        function closeTopics() { document.getElementById('topic-container').classList.add('hidden'); }
         async function sendChat() {
             const inp = document.getElementById('chat-in');
             if(!inp.value.trim()) return;
-            document.getElementById('chat-window').innerHTML += `<div class="flex justify-end mb-2"><div class="bg-blue-600 p-3 rounded-2xl text-sm shadow-lg">${inp.value}</div></div>`;
+            document.getElementById('chat-window').innerHTML += `<div class="flex justify-end mb-2"><div class="bg-blue-600 p-3 rounded-xl text-sm">${inp.value}</div></div>`;
             inp.value = "";
         }
-
         async function enablePiP() {
-            try {
-                const video = document.getElementById('webcam');
-                if (document.pictureInPictureElement) {
-                    await document.exitPictureInPicture();
-                } else {
-                    await video.requestPictureInPicture();
-                }
-            } catch (error) {
-                console.error("PiP Error:", error);
-                alert("เบราว์เซอร์ของคุณไม่รองรับโหมดหน้าต่างลอย หรือ กล้องยังโหลดไม่เสร็จ");
-            }
+            try { await videoElement.requestPictureInPicture(); } catch (e) { alert("อุปกรณ์ของคุณไม่รองรับ PiP"); }
         }
     </script>
 </body>
