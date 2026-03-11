@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     
     try {
         const { prompt, score, focusLevel } = req.body;
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         
         const systemInstruction = `คุณคือที่ปรึกษา EduSmart AI คะแนนสมาธิคือ ${score || 0}% ระดับคือ ${focusLevel || 'ปกติ'}`;
         
@@ -22,4 +22,5 @@ export default async function handler(req, res) {
     } catch (error) {
         res.status(500).json({ result: "เกิดข้อผิดพลาด: " + error.message });
     }
+
 }
