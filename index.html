@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduSmart AI - Lesson Library</title>
+    <title>รอ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -15,7 +15,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
         body { font-family: 'Kanit', sans-serif; background-color: #0f172a; color: #f1f5f9; overflow-x: hidden; }
         
-        /* แก้ไขระบบซ่อนแท็บ: ใช้ Opacity + Z-index เพื่อไม่ให้วิดีโอถูกถอดออกจากหน้าจอ */
         .tab-content { 
             position: absolute;
             top: 0; left: 0; right: 0;
@@ -23,7 +22,7 @@
             pointer-events: none;
             transition: opacity 0.3s ease;
             z-index: 1;
-            visibility: hidden; /* เพิ่มเพื่อให้แน่ใจว่าไม่เกะกะ */
+            visibility: hidden;
         }
         .tab-content.active { 
             position: relative;
@@ -59,7 +58,7 @@
     </header>
 
     <aside id="sidebar" class="w-64 bg-slate-900 h-screen fixed left-0 top-0 flex-col p-6 border-r border-slate-800 flex">
-        <h1 class="hidden md:block text-2xl font-bold text-blue-500 mb-10 tracking-tighter"><i class="fa-solid fa-bolt-lightning mr-2"></i>EDUSMART AI</h1>
+        <h1 class="hidden md:block text-2xl font-bold text-blue-500 mb-10 tracking-tighter"><i class="fa-solid fa-bolt-lightning mr-2"></i>รอ</h1>
         <nav class="space-y-3">
             <button onclick="switchTab('monitor')" class="tab-btn w-full flex items-center p-4 rounded-xl bg-slate-800 text-white transition-all"><i class="fa-solid fa-robot mr-3"></i>AI Monitor</button>
             <button onclick="switchTab('classroom')" class="tab-btn w-full flex items-center p-4 rounded-xl hover:bg-slate-800 transition-all"><i class="fa-solid fa-book-open mr-3"></i>Classroom</button>
@@ -88,12 +87,9 @@
                     </div>
                 </div>
                 <div class="space-y-4">
-                    <button onclick="enablePiP()" class="w-full bg-emerald-600 hover:bg-emerald-500 p-4 rounded-2xl flex items-center justify-center font-bold text-white shadow-lg transition-all active:scale-95">
-                        <i class="fa-solid fa-window-restore mr-2"></i> เปิดหน้าจอลอย (PiP)
-                    </button>
                     <div class="glass p-6 rounded-3xl text-center">
                         <p class="text-slate-400 text-xs mb-2 uppercase tracking-widest">Focus Status</p>
-                        <h3 id="focus-label" class="text-2xl font-black text-slate-500 italic">준비 (Ready)</h3>
+                        <h3 id="focus-label" class="text-2xl font-black text-slate-500 italic">Ready</h3>
                     </div>
                     <div class="glass p-4 rounded-3xl h-48"><canvas id="liveChart"></canvas></div>
                 </div>
@@ -112,6 +108,12 @@
                 <button onclick="showTopicList('chemistry')" class="glass p-6 rounded-3xl border-b-4 border-emerald-500 hover:bg-emerald-600/10 transition">
                     <i class="fa-solid fa-flask text-3xl text-emerald-500 mb-2"></i><p>เคมี</p>
                 </button>
+                <button onclick="showTopicList('biology')" class="glass p-6 rounded-3xl border-b-4 border-red-500 hover:bg-red-600/10 transition">
+                    <i class="fa-solid fa-dna text-3xl text-red-500 mb-2"></i><p>ชีวะ</p>
+                </button>
+                <button onclick="showTopicList('math')" class="glass p-6 rounded-3xl border-b-4 border-yellow-500 hover:bg-yellow-600/10 transition">
+                    <i class="fa-solid fa-calculator text-3xl text-yellow-500 mb-2"></i><p>คณิตศาสตร์</p>
+                </button>
             </div>
             <div id="topic-container" class="glass p-6 rounded-[2rem] hidden border border-slate-700">
                 <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
@@ -125,10 +127,12 @@
         <section id="chat" class="tab-content h-[80vh]">
             <h2 class="text-2xl font-bold mb-4 text-blue-400">AI COUNSELOR</h2>
             <div class="glass h-full rounded-[2rem] flex flex-col overflow-hidden">
-                <div id="chat-window" class="flex-1 p-6"></div>
+                <div id="chat-window" class="flex-1 p-6 overflow-y-auto"></div>
                 <div class="p-4 bg-slate-900/50 flex gap-2">
                     <input type="text" class="flex-1 bg-slate-800 p-4 rounded-xl outline-none" placeholder="ถาม AI เรื่องบทเรียน...">
-                    <button class="bg-blue-600 px-6 rounded-xl"><i class="fa-solid fa-paper-plane"></i></button>
+                    <button onclick="askAI()" class="bg-blue-600 px-6 rounded-xl hover:bg-blue-500 transition-all">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
                 </div>
             </div>
         </section>
@@ -139,7 +143,6 @@
         const focusLabel = document.getElementById('focus-label');
         let focusScore = 80;
 
-        // --- 1. ระบบจำลองกล้อง (กรณีไม่มีกล้องจริง) ---
         function createFakeStream() {
             const canvas = document.createElement('canvas');
             canvas.width = 640; canvas.height = 480;
@@ -153,7 +156,6 @@
             return canvas.captureStream();
         }
 
-        // --- 2. การควบคุม Sidebar & Tab ---
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('overlay').classList.toggle('hidden');
@@ -170,31 +172,22 @@
             if (window.innerWidth < 768) toggleSidebar();
         }
 
-        // --- 3. ฟังก์ชันเช็คการมองและการหลับตา (จุดที่แก้ใหม่) ---
         function checkGaze(landmarks) {
             if(!landmarks) return false;
-            
-            // วัดระยะห่างเปลือกตา (หลับตา = ระยะเข้าใกล้ 0)
             const eyeDistance = landmarks[145].y - landmarks[159].y;
             const isEyeOpen = eyeDistance > 0.012; 
-
-            // เช็คตาดำ (Iris) ให้อยู่ในกรอบหน้าจอ
             const leftIris = landmarks[468];
             const isLookingCenter = leftIris && (leftIris.x > 0.35 && leftIris.x < 0.65);
-
             return isEyeOpen && isLookingCenter;
         }
 
-        // --- 4. เริ่มต้นระบบ AI & Camera ---
         const faceMesh = new FaceMesh({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
         faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
         
         faceMesh.onResults((results) => {
             document.getElementById('loading-ai').style.display = 'none';
             let isFocused = false;
-
             if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-                // เรียกใช้ฟังก์ชันเช็คตาที่เราสร้างไว้
                 isFocused = checkGaze(results.multiFaceLandmarks[0]);
             }
 
@@ -215,13 +208,11 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 videoElement.srcObject = stream;
             } catch (err) {
-                console.warn("Camera not found, using fake stream for PiP support.");
                 videoElement.srcObject = createFakeStream();
                 document.getElementById('loading-icon').className = "fa-solid fa-triangle-exclamation text-amber-500 text-4xl mb-2";
                 document.getElementById('loading-text').innerText = "โหมดทดสอบ: ไม่พบกล้อง";
                 setTimeout(() => document.getElementById('loading-ai').style.display = 'none', 2000);
             }
-            
             const camera = new Camera(videoElement, {
                 onFrame: async () => { await faceMesh.send({image: videoElement}); },
                 width: 640, height: 480
@@ -230,65 +221,46 @@
         }
         initCamera();
 
-        // --- 5. โหมดหน้าจอลอย (PiP) & เริ่มเรียน ---
         async function enablePiP() {
             try {
-                if (videoElement.readyState < 2) {
-                    alert("ระบบยังไม่พร้อม กรุณารอสักครู่ครับ");
-                    return;
-                }
+                if (videoElement.readyState < 2) { alert("ระบบยังไม่พร้อม"); return; }
                 if (document.pictureInPictureElement) return;
                 await videoElement.requestPictureInPicture();
-            } catch (e) {
-                alert("เบราว์เซอร์บล็อกการทำงาน (แนะนำให้รันผ่าน Live Server หรือ Edge ครับ)");
-            }
+            } catch (e) { alert("เบราว์เซอร์บล็อกการทำงาน"); }
         }
 
         async function startLesson(url) {
-            if (!document.pictureInPictureElement) {
-                await enablePiP();
-            }
-            setTimeout(() => {
-                window.open(url, '_blank');
-            }, 600);
+            if (!document.pictureInPictureElement) await enablePiP();
+            setTimeout(() => { window.open(url, '_blank'); }, 600);
         }
 
-        // --- 6. ข้อมูลบทเรียน ---
         const topicsData = {
-            physics: { 
-                name: "ฟิสิกส์", color: "blue", 
-                items: [
-                    { title: "การเคลื่อนที่แนวตรง", url: "https://www.youtube.com/watch?v=R1nMZjchfeY" },
-                    { title: "งานและพลังงาน", url: "https://www.youtube.com/watch?v=q6_fD9eS_0I" }
-                ] 
-            },
-            chemistry: { 
-                name: "เคมี", color: "emerald", 
-                items: [
-                    { title: "พันธะเคมี", url: "https://www.youtube.com/watch?v=R_iU0mX9E7o" },
-                    { title: "ตารางธาตุ", url: "https://www.youtube.com/watch?v=7_W0t2vR-zM" }
-                ] 
-            }
+            physics: { name: "ฟิสิกส์", color: "blue", items: [{ title: "การเคลื่อนที่แนวตรง", url: "รอใส่ลิ้ง" }, { title: "แรงและกฏการเคลื่อนที่", url: "รอใส่ลิ้ง" }, { title: "สมดุลกล", url: "รอใส่ลิ้ง" }, { title: "งานและพลังงาน", url: "รอใส่ลิ้ง" }, { title: "โมเมนตัมและการชน", url: "รอใส่ลิ้ง" }, { title: "การเคลื่อนที่แบบโพรเจกไทล์", url: "รอใส่ลิ้ง" }] },
+            chemistry: { name: "เคมี", color: "emerald", items: [{ title: "ความปลอดภัยในห้องปฏิบัติการ", url: "รอใส่ลิ้ง" }, { title: "อะตอมและตารางธาตุ", url: "รอใส่ลิ้ง" }, { title: "พันธะเคมี", url: "รอใส่ลิ้ง" }, { title: "โมลและสูตรโมเลกุล", url: "รอใส่ลิ้ง" }, { title: "สารละลาย", url: "รอใส่ลิ้งค์" }, { title: "ปริมาณสารสัมพันธ์", url: "รอใส่ลิ้ง" }] },
+            math: { name: "คณิตศาสตร์", color: "yellow", items: [{ title: "เซต", url: "รอใส่ลิ้ง" }, { title: "ตรรกศาสตร์", url: "รอใส่ลิ้ง" }, { title: "จำนวนจริง", url: "รอใส่ลิ้ง" }, { title: "ฟังก์ชั่น", url: "รอใส่ลิ้ง" }, { title: "เมทริกซ์", url: "รอใส่ลิ้ง" }, { title: "เลขาคณิตวิเคราะห์", url: "รอใส่ลิ้ง" }] },
+            biology: { name: "ชีววิทยา", color: "red", items: [{ title: "เคมีที่เป็นพื้นฐานสิ่งมีชีวิต", url: "รอใส่ลิ้ง" }, { title: "เซลล์ของสิ่งมีชีวิต", url: "รอใส่ลิ้ง" }, { title: "การแบ่งเซลล์", url: "รอใส่ลิ้ง" }, { title: "การย่อยอาหาร", url: "รอใส่ลิ้ง" }, { title: "การหายใจระดับเซลล์", url: "รอใส่ลิ้ง" }] }
         };
 
         function showTopicList(key) {
             const data = topicsData[key];
             const list = document.getElementById('topic-list');
             document.getElementById('selected-subject-title').innerText = data.name;
-            list.innerHTML = data.items.map(item => `
-                <div class="flex items-center justify-between p-4 rounded-xl bg-slate-800/60 border border-slate-700">
-                    <span class="text-sm font-medium text-slate-200">${item.title}</span>
-                    <button onclick="startLesson('${item.url}')" 
-                            class="bg-${data.color}-600 hover:bg-${data.color}-500 px-4 py-2 rounded-lg text-xs font-bold text-white transition-all">
-                        <i class="fa-solid fa-play mr-1"></i> เริ่มเรียน
-                    </button>
-                </div>`).join('');
+            list.innerHTML = data.items.map((item, index) => {
+                const orderNumber = String(index + 1).padStart(2, '0');
+                return `
+                <div class="flex items-center p-4 rounded-xl bg-slate-800/60 border border-slate-700 hover:bg-slate-700/50 transition-all group">
+                    <div class="flex-shrink-0 w-10 h-8 flex items-center justify-center rounded-lg bg-${data.color}-500/20 border border-${data.color}-500/40 mr-4">
+                        <span class="text-${data.color}-400 font-bold text-xs">${orderNumber}</span>
+                    </div>
+                    <div class="flex-1"><span class="text-sm font-medium text-slate-200">${item.title}</span></div>
+                    <button onclick="startLesson('${item.url}')" class="bg-${data.color}-600 hover:bg-${data.color}-500 px-4 py-2 rounded-lg text-xs font-bold text-white transition-all ml-4">เริ่มเรียน</button>
+                </div>`;
+            }).join('');
             document.getElementById('topic-container').classList.remove('hidden');
         }
 
         function closeTopics() { document.getElementById('topic-container').classList.add('hidden'); }
 
-        // --- 7. Chart Logic ---
         const chartCtx = document.getElementById('liveChart').getContext('2d');
         const liveChart = new Chart(chartCtx, {
             type: 'line',
@@ -300,6 +272,49 @@
             liveChart.data.datasets[0].data.shift();
             liveChart.update('none');
         }
+    </script>
+
+    <script>
+        async function askAI() {
+            const chatInput = document.querySelector('#chat input');
+            const chatWindow = document.getElementById('chat-window');
+            const question = chatInput.value.trim();
+
+            if (!question) return;
+
+            // แสดงข้อความของผู้ใช้
+            chatWindow.innerHTML += `<div class="mb-4 text-right"><span class="bg-blue-600 p-3 rounded-2xl inline-block text-sm shadow-md">${question}</span></div>`;
+            chatInput.value = '';
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            try {
+                
+                
+const response = await fetch('/api/chat', { 
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+        prompt: question,
+        score: typeof focusScore !== 'undefined' ? Math.round(focusScore) : 0, 
+        focusLevel: (typeof focusScore !== 'undefined' && focusScore > 70) ? 'สูง' : 'ต่ำ'
+    })
+});
+
+                const data = await response.json();
+                
+                // แสดงคำตอบจาก AI พี่ติวเตอร์
+                chatWindow.innerHTML += `<div class="mb-4 text-left"><span class="bg-slate-800 p-3 rounded-2xl inline-block text-sm text-slate-200 border border-slate-700 shadow-lg">🤖 พี่ติวเตอร์: ${data.result}</span></div>`;
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            } catch (error) {
+                chatWindow.innerHTML += `<div class="text-red-400 text-[10px] text-center mb-4 italic">เชื่อมต่อพี่ติวเตอร์ไม่ได้ (เช็คว่ารัน node server.js หรือยัง?)</div>`;
+            }
+        }
+
+        // ทำให้กด Enter แล้วส่งข้อความได้เลย
+        document.querySelector('#chat input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') askAI();
+        });
     </script>
 </body>
 </html>
