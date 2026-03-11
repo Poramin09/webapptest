@@ -158,7 +158,55 @@
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('overlay').classList.toggle('hidden');
         }
+        faceMesh.onResults((results) => {
+    document.getElementById('loading-ai').style.display = 'none';
+    
+    let isFocused = false;
 
+    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+        const landmarks = results.multiFaceLandmarks[0];
+        
+        // เรียกใช้ฟังก์ชัน checkGaze ที่เรามีอยู่แล้ว
+        // ฟังก์ชันนี้จะเช็ค: 1. ลืมตาอยู่ไหม 2. ตาดำอยู่ตรงกลางไหม
+        isFocused = checkGaze(landmarks);
+    }
+
+    if (isFocused) {
+        focusScore = Math.min(focusScore + 0.8, 100);
+        focusLabel.innerText = "กำลังตั้งใจเรียน";
+        focusLabel.className = "text-2xl font-black text-emerald-400 italic";
+    } else {
+        focusScore = Math.max(focusScore - 1.2, 0); // ถ้าหลับตาหรือเมินหน้า คะแนนจะลดฮวบเลย
+        focusLabel.innerText = "ไม่ได้มองจอ / หลับตา";
+        focusLabel.className = "text-2xl font-black text-rose-500 italic"; // เปลี่ยนเป็นสีแดงให้รู้ตัว!
+    }
+    
+    updateChart();
+});
+
+// ปรับปรุงฟังก์ชัน checkGaze ให้แม่นยำขึ้นอีกนิดนาย
+function checkGaze(landmarks) {
+    // 1. เช็คการลืมตา (Eye Opening)
+    // ใช้ระยะห่างของเปลือกตาบนและล่าง (เส้นรอบรูปตา)
+    const leftEyeUpper = landmarks[159];
+    const leftEyeLower = landmarks[145];
+    const rightEyeUpper = landmarks[386];
+    const rightEyeLower = landmarks[374];
+
+    const leftEyeOpen = (leftEyeLower.y - leftEyeUpper.y) > 0.012; // ค่าความห่าง ถ้าต่ำกว่านี้คือหลับตา
+    const rightEyeOpen = (rightEyeLower.y - rightEyeUpper.y) > 0.012;
+
+    // 2. เช็คทิศทางตาดำ (Iris Tracking)
+    const leftIris = landmarks[468];
+    const rightIris = landmarks[473];
+    
+    if(!leftIris || !rightIris) return false;
+
+    // ตาดำต้องอยู่ช่วงกลางๆ (ไม่เหล่ไปซ้ายหรือขวาเกินไป)
+    const isLookingCenter = (leftIris.x > 0.38 && leftIris.x < 0.62);
+
+    return leftEyeOpen && rightEyeOpen && isLookingCenter;
+}
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById(id).classList.add('active');
@@ -169,32 +217,10 @@
             });
             if (window.innerWidth < 768) toggleSidebar();
         }
+
+
         
-        function checkGaze(landmarks) {
-            const leftIris = landmarks[468];
-            if(!leftIris) return false;
-            const isLookingCenter = (leftIris.x > 0.35 && leftIris.x < 0.65);
-            const eyeOpenStatus = (landmarks[145].y - landmarks[159].y) > 0.010;
-            return isLookingCenter && eyeOpenStatus;
-        }
-
-        // --- 3. เริ่มต้นระบบ AI & Camera ---
-        const faceMesh = new FaceMesh({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
-        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-        faceMesh.onResults((results) => {
-            document.getElementById('loading-ai').style.display = 'none';
-            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-                focusScore = Math.min(focusScore + 0.5, 100);
-                focusLabel.innerText = "กำลังตั้งใจเรียน";
-                focusLabel.className = "text-2xl font-black text-emerald-400 italic";
-            } else {
-                focusScore = Math.max(focusScore - 0.2, 0);
-                focusLabel.innerText = "ไม่พบใบหน้า";
-                focusLabel.className = "text-2xl font-black text-slate-500 italic";
-            }
-            updateChart();
-        });
-
+        
         async function initCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
