@@ -158,55 +158,7 @@
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('overlay').classList.toggle('hidden');
         }
-        faceMesh.onResults((results) => {
-    document.getElementById('loading-ai').style.display = 'none';
-    
-    let isFocused = false;
-
-    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-        const landmarks = results.multiFaceLandmarks[0];
         
-        // เรียกใช้ฟังก์ชัน checkGaze ที่เรามีอยู่แล้ว
-        // ฟังก์ชันนี้จะเช็ค: 1. ลืมตาอยู่ไหม 2. ตาดำอยู่ตรงกลางไหม
-        isFocused = checkGaze(landmarks);
-    }
-
-    if (isFocused) {
-        focusScore = Math.min(focusScore + 0.8, 100);
-        focusLabel.innerText = "กำลังตั้งใจเรียน";
-        focusLabel.className = "text-2xl font-black text-emerald-400 italic";
-    } else {
-        focusScore = Math.max(focusScore - 1.2, 0); // ถ้าหลับตาหรือเมินหน้า คะแนนจะลดฮวบเลย
-        focusLabel.innerText = "ไม่ได้มองจอ / หลับตา";
-        focusLabel.className = "text-2xl font-black text-rose-500 italic"; // เปลี่ยนเป็นสีแดงให้รู้ตัว!
-    }
-    
-    updateChart();
-});
-
-// ปรับปรุงฟังก์ชัน checkGaze ให้แม่นยำขึ้นอีกนิดนาย
-function checkGaze(landmarks) {
-    // 1. เช็คการลืมตา (Eye Opening)
-    // ใช้ระยะห่างของเปลือกตาบนและล่าง (เส้นรอบรูปตา)
-    const leftEyeUpper = landmarks[159];
-    const leftEyeLower = landmarks[145];
-    const rightEyeUpper = landmarks[386];
-    const rightEyeLower = landmarks[374];
-
-    const leftEyeOpen = (leftEyeLower.y - leftEyeUpper.y) > 0.012; // ค่าความห่าง ถ้าต่ำกว่านี้คือหลับตา
-    const rightEyeOpen = (rightEyeLower.y - rightEyeUpper.y) > 0.012;
-
-    // 2. เช็คทิศทางตาดำ (Iris Tracking)
-    const leftIris = landmarks[468];
-    const rightIris = landmarks[473];
-    
-    if(!leftIris || !rightIris) return false;
-
-    // ตาดำต้องอยู่ช่วงกลางๆ (ไม่เหล่ไปซ้ายหรือขวาเกินไป)
-    const isLookingCenter = (leftIris.x > 0.38 && leftIris.x < 0.62);
-
-    return leftEyeOpen && rightEyeOpen && isLookingCenter;
-}
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.getElementById(id).classList.add('active');
@@ -218,9 +170,46 @@ function checkGaze(landmarks) {
             if (window.innerWidth < 768) toggleSidebar();
         }
 
+        // --- 3. ฟังก์ชันเช็คการมองและการหลับตา (จุดที่แก้ใหม่) ---
+        function checkGaze(landmarks) {
+            if(!landmarks) return false;
+            
+            // วัดระยะห่างเปลือกตา (หลับตา = ระยะเข้าใกล้ 0)
+            const eyeDistance = landmarks[145].y - landmarks[159].y;
+            const isEyeOpen = eyeDistance > 0.012; 
 
+            // เช็คตาดำ (Iris) ให้อยู่ในกรอบหน้าจอ
+            const leftIris = landmarks[468];
+            const isLookingCenter = leftIris && (leftIris.x > 0.35 && leftIris.x < 0.65);
+
+            return isEyeOpen && isLookingCenter;
+        }
+
+        // --- 4. เริ่มต้นระบบ AI & Camera ---
+        const faceMesh = new FaceMesh({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
+        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
         
-        
+        faceMesh.onResults((results) => {
+            document.getElementById('loading-ai').style.display = 'none';
+            let isFocused = false;
+
+            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                // เรียกใช้ฟังก์ชันเช็คตาที่เราสร้างไว้
+                isFocused = checkGaze(results.multiFaceLandmarks[0]);
+            }
+
+            if (isFocused) {
+                focusScore = Math.min(focusScore + 0.6, 100);
+                focusLabel.innerText = "กำลังตั้งใจเรียน";
+                focusLabel.className = "text-2xl font-black text-emerald-400 italic";
+            } else {
+                focusScore = Math.max(focusScore - 0.8, 0);
+                focusLabel.innerText = "หลับตา / มองที่อื่น";
+                focusLabel.className = "text-2xl font-black text-rose-500 italic";
+            }
+            updateChart();
+        });
+
         async function initCamera() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -241,7 +230,7 @@ function checkGaze(landmarks) {
         }
         initCamera();
 
-        // --- 4. โหมดหน้าจอลอย (PiP) & เริ่มเรียน ---
+        // --- 5. โหมดหน้าจอลอย (PiP) & เริ่มเรียน ---
         async function enablePiP() {
             try {
                 if (videoElement.readyState < 2) {
@@ -256,17 +245,15 @@ function checkGaze(landmarks) {
         }
 
         async function startLesson(url) {
-            // บังคับเปิด PiP ก่อนถ้ายังไม่ได้เปิด
             if (!document.pictureInPictureElement) {
                 await enablePiP();
             }
-            // รอให้ PiP ทำงานเสร็จแล้วเปิดคลิป
             setTimeout(() => {
                 window.open(url, '_blank');
             }, 600);
         }
 
-        // --- 5. ข้อมูลบทเรียน ---
+        // --- 6. ข้อมูลบทเรียน ---
         const topicsData = {
             physics: { 
                 name: "ฟิสิกส์", color: "blue", 
@@ -301,7 +288,7 @@ function checkGaze(landmarks) {
 
         function closeTopics() { document.getElementById('topic-container').classList.add('hidden'); }
 
-        // --- 6. Chart Logic ---
+        // --- 7. Chart Logic ---
         const chartCtx = document.getElementById('liveChart').getContext('2d');
         const liveChart = new Chart(chartCtx, {
             type: 'line',
