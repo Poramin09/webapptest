@@ -169,6 +169,14 @@
             });
             if (window.innerWidth < 768) toggleSidebar();
         }
+        
+        function checkGaze(landmarks) {
+            const leftIris = landmarks[468];
+            if(!leftIris) return false;
+            const isLookingCenter = (leftIris.x > 0.35 && leftIris.x < 0.65);
+            const eyeOpenStatus = (landmarks[145].y - landmarks[159].y) > 0.010;
+            return isLookingCenter && eyeOpenStatus;
+        }
 
         // --- 3. เริ่มต้นระบบ AI & Camera ---
         const faceMesh = new FaceMesh({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
