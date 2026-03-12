@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รอ</title>
+    <title>Personalized Education</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -53,16 +53,16 @@
 <body class="min-h-screen">
 
     <header class="md:hidden flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 sticky top-0 z-[60]">
-        <h1 class="text-xl font-bold text-blue-500"><i class="fa-solid fa-bolt-lightning mr-2"></i>EDUSMART</h1>
+        <h1 class="text-xl font-bold text-blue-500"><i class="fa-solid fa-bolt-lightning mr-2"></i>Personalized Education</h1>
         <button onclick="toggleSidebar()" class="text-2xl text-white p-2"><i class="fa-solid fa-bars"></i></button>
     </header>
 
     <aside id="sidebar" class="w-64 bg-slate-900 h-screen fixed left-0 top-0 flex-col p-6 border-r border-slate-800 flex">
-        <h1 class="hidden md:block text-2xl font-bold text-blue-500 mb-10 tracking-tighter"><i class="fa-solid fa-bolt-lightning mr-2"></i>รอ</h1>
+        <h1 class="hidden md:block text-2xl font-bold text-blue-500 mb-10 tracking-tighter"><i class="fa-solid fa-bolt-lightning mr-2"></i>Personalized Education</h1>
         <nav class="space-y-3">
             <button onclick="switchTab('monitor')" class="tab-btn w-full flex items-center p-4 rounded-xl bg-slate-800 text-white transition-all"><i class="fa-solid fa-robot mr-3"></i>AI Monitor</button>
             <button onclick="switchTab('classroom')" class="tab-btn w-full flex items-center p-4 rounded-xl hover:bg-slate-800 transition-all"><i class="fa-solid fa-book-open mr-3"></i>Classroom</button>
-            <button onclick="switchTab('chat')" class="tab-btn w-full flex items-center p-4 rounded-xl hover:bg-slate-800 transition-all"><i class="fa-solid fa-comment-dots mr-3"></i>AI Counselor</button>
+            <button onclick="switchTab('chat')" class="tab-btn w-full flex items-center p-4 rounded-xl hover:bg-slate-800 transition-all"><i class="fa-solid fa-comment-dots mr-3"></i>AI assistant</button>
         </nav>
     </aside>
 
@@ -99,7 +99,7 @@
         <section id="classroom" class="tab-content">
             <div class="mb-8">
                 <h2 class="text-3xl font-bold text-emerald-400">CLASSROOM</h2>
-                <p class="text-slate-400 text-sm">เลือกบทเรียนเพื่อเริ่มตรวจจับโฟกัส</p>
+                <p class="text-slate-400 text-sm">เลือกบทเรียน & ตรวจจับโฟกัส</p>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                 <button onclick="showTopicList('physics')" class="glass p-6 rounded-3xl border-b-4 border-blue-500 hover:bg-blue-600/10 transition">
@@ -125,7 +125,7 @@
         </section>
 
         <section id="chat" class="tab-content h-[80vh]">
-            <h2 class="text-2xl font-bold mb-4 text-blue-400">AI COUNSELOR</h2>
+            <h2 class="text-2xl font-bold mb-4 text-blue-400"> AI assistant</h2>
             <div class="glass h-full rounded-[2rem] flex flex-col overflow-hidden">
                 <div id="chat-window" class="flex-1 p-6 overflow-y-auto"></div>
                 <div class="p-4 bg-slate-900/50 flex gap-2">
@@ -141,7 +141,60 @@
     <script>
         const videoElement = document.getElementById('webcam');
         const focusLabel = document.getElementById('focus-label');
+        
+        // --- ส่วนที่แก้ไข: การประกาศตัวแปรและการตั้งค่ากราฟ ---
         let focusScore = 80;
+        let secondCounter = 0;
+        let minuteCounter = 0;
+        
+        const chartCtx = document.getElementById('liveChart').getContext('2d');
+        const liveChart = new Chart(chartCtx, {
+            type: 'line', 
+            data: {
+                labels: Array(20).fill(''), 
+                datasets: [{
+                    label: 'ระดับการโฟกัส',
+                    data: Array(20).fill(80), 
+                    borderColor: '#60a5fa', 
+                    backgroundColor: 'rgba(96, 165, 250, 0.2)', 
+                    fill: true, 
+                    tension: 0.4, 
+                    borderWidth: 3,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        min: 0, max: 100,
+                        ticks: { color: '#94a3b8' }, 
+                        grid: { color: 'rgba(255,255,255,0.05)' } 
+                    },
+                    x: { 
+                        ticks: { color: '#94a3b8' }, 
+                        grid: { display: false } 
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        function updateChart() {
+            secondCounter++;
+            if (secondCounter % 10 === 0) { 
+                minuteCounter++;
+                liveChart.data.labels.push(minuteCounter); 
+                liveChart.data.datasets[0].data.push(Math.round(focusScore));
+
+                if (liveChart.data.labels.length > 20) {
+                    liveChart.data.labels.shift();
+                    liveChart.data.datasets[0].data.shift();
+                }
+                liveChart.update('none');
+            }
+        }
 
         function createFakeStream() {
             const canvas = document.createElement('canvas');
@@ -187,17 +240,24 @@
         faceMesh.onResults((results) => {
             document.getElementById('loading-ai').style.display = 'none';
             let isFocused = false;
+            let faceDetected = false; 
+
             if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                faceDetected = true;
                 isFocused = checkGaze(results.multiFaceLandmarks[0]);
             }
 
-            if (isFocused) {
+            if (!faceDetected) {
+                focusLabel.innerText = "ไม่พบใบหน้า";
+                focusLabel.className = "text-2xl font-black text-amber-500 italic";
+                focusScore = Math.max(focusScore - 0.2, 0); 
+            } else if (isFocused) {
                 focusScore = Math.min(focusScore + 0.6, 100);
                 focusLabel.innerText = "กำลังตั้งใจเรียน";
                 focusLabel.className = "text-2xl font-black text-emerald-400 italic";
             } else {
                 focusScore = Math.max(focusScore - 0.8, 0);
-                focusLabel.innerText = "หลับตา / มองที่อื่น";
+                focusLabel.innerText = "ตั้งใจเรียนหน่อยครับ";
                 focusLabel.className = "text-2xl font-black text-rose-500 italic";
             }
             updateChart();
@@ -235,10 +295,36 @@
         }
 
         const topicsData = {
-            physics: { name: "ฟิสิกส์", color: "blue", items: [{ title: "การเคลื่อนที่แนวตรง", url: "รอใส่ลิ้ง" }, { title: "แรงและกฏการเคลื่อนที่", url: "รอใส่ลิ้ง" }, { title: "สมดุลกล", url: "รอใส่ลิ้ง" }, { title: "งานและพลังงาน", url: "รอใส่ลิ้ง" }, { title: "โมเมนตัมและการชน", url: "รอใส่ลิ้ง" }, { title: "การเคลื่อนที่แบบโพรเจกไทล์", url: "รอใส่ลิ้ง" }] },
-            chemistry: { name: "เคมี", color: "emerald", items: [{ title: "ความปลอดภัยในห้องปฏิบัติการ", url: "รอใส่ลิ้ง" }, { title: "อะตอมและตารางธาตุ", url: "รอใส่ลิ้ง" }, { title: "พันธะเคมี", url: "รอใส่ลิ้ง" }, { title: "โมลและสูตรโมเลกุล", url: "รอใส่ลิ้ง" }, { title: "สารละลาย", url: "รอใส่ลิ้งค์" }, { title: "ปริมาณสารสัมพันธ์", url: "รอใส่ลิ้ง" }] },
-            math: { name: "คณิตศาสตร์", color: "yellow", items: [{ title: "เซต", url: "รอใส่ลิ้ง" }, { title: "ตรรกศาสตร์", url: "รอใส่ลิ้ง" }, { title: "จำนวนจริง", url: "รอใส่ลิ้ง" }, { title: "ฟังก์ชั่น", url: "รอใส่ลิ้ง" }, { title: "เมทริกซ์", url: "รอใส่ลิ้ง" }, { title: "เลขาคณิตวิเคราะห์", url: "รอใส่ลิ้ง" }] },
-            biology: { name: "ชีววิทยา", color: "red", items: [{ title: "เคมีที่เป็นพื้นฐานสิ่งมีชีวิต", url: "รอใส่ลิ้ง" }, { title: "เซลล์ของสิ่งมีชีวิต", url: "รอใส่ลิ้ง" }, { title: "การแบ่งเซลล์", url: "รอใส่ลิ้ง" }, { title: "การย่อยอาหาร", url: "รอใส่ลิ้ง" }, { title: "การหายใจระดับเซลล์", url: "รอใส่ลิ้ง" }] }
+            physics: { name: "ฟิสิกส์", color: "blue",
+            items: [
+            { title: "การเคลื่อนที่แนวตรง", url: "https://youtu.be/dcqXCYp1cZw?si=ixZfC81sn8EpWylW" }, 
+            { title: "แรงและกฏการเคลื่อนที่", url: "https://youtu.be/N9yoibrobCg?si=yd98Lt1np95quGKT" }, 
+            { title: "สมดุลกล", url: "https://youtu.be/EcSHK27lcPs?si=LXSgmxKUSfGBZP8k" }, 
+            { title: "งานและพลังงาน", url: "https://youtu.be/JZPElBZaMJo?si=KsJ4VcuoUotHe4YN" }, 
+            { title: "โมเมนตัมและการชน", url: "https://youtu.be/NUpbuXeLnmU?si=scUdG6O-T0nGt4uR" }, 
+            { title: "การเคลื่อนที่แบบโพรเจกไทล์", url: "https://youtu.be/177VJg1I_NQ?si=QH_4CCMESZRjGZ56" }] },
+            chemistry: { name: "เคมี", color: "emerald", 
+            items: [
+                { title: "ความปลอดภัยในห้องปฏิบัติการ", url: "https://youtube.com/playlist?list=PLGmsX63OOmXr4oLRCNdxuAGPAZ6cYUX90&si=Ukwja-9Q9MrWnJyM" }, 
+                { title: "อะตอมและตารางธาตุ", url: "https://youtube.com/playlist?list=PLSdxlgp7CC2Q33BE877ck383ZqP4GAuuL&si=Ekip8Yfhtlomk5iI" }, 
+                { title: "พันธะเคมี", url: "https://youtube.com/playlist?list=PLlSdOm06ZZ7ThagD8BDTlTG8SU5KYVcqV&si=vquvz1v3RFGgzOw2ง" }, 
+                { title: "โมลและสูตรโมเลกุล", url: "https://youtube.com/playlist?list=PLlSdOm06ZZ7T-YxGmJYqr218iuIiuOK__&si=mSsSiF0s6CyHEYAX" }, 
+                { title: "สารละลาย", url: "https://youtube.com/playlist?list=PLHY_bhZpPfZxJVv71pmrI-oPy3YTPDOse&si=_9UHbneFAyPjB2DD" }, 
+                { title: "ปริมาณสารสัมพันธ์", url: "https://youtube.com/playlist?list=PLlSdOm06ZZ7Q8UwIhklDMR_-oXqwO7GpO&si=V3c8zXi6IW2QwH0n" }] },
+            math: { name: "คณิตศาสตร์", color: "yellow", 
+            items: [
+            { title: "เซต", url: "https://youtu.be/U3b904GBpnI?si=jvuU420l6F2M8YO5" }, 
+            { title: "ตรรกศาสตร์", url: "https://youtu.be/2ImBmLx-oRk?si=A5zPiBXMDOnqUoY-" }, 
+            { title: "จำนวนจริง", url: "https://www.youtube.com/live/2Xhzt8Fetn0?si=m1m4x_7SrkVLFEm0" }, 
+            { title: "ฟังก์ชั่น", url: "https://youtu.be/470KJ3cIEFU?si=uSom7JZ1lKGNQNQO" }, 
+            { title: "เลขาคณิตวิเคราะห์", url: "https://youtu.be/MbG77ZOMgUU?si=Vp_g6rUmyGQts-ER" }] },
+            biology: { name: "ชีววิทยา", color: "red", 
+            items: [
+            { title: "เคมีที่เป็นพื้นฐานสิ่งมีชีวิต", url: "https://youtu.be/C7Qt8YomPFI?si=kIOX-jXouEL068Ta" }, 
+            { title: "เซลล์ของสิ่งมีชีวิต", url: "https://youtu.be/Hx8si06BnDM?si=4hvq9gjpzMFkIN0g" }, 
+            { title: "การแบ่งเซลล์", url: "https://youtu.be/Cya7cMowg4A?si=6vby5gPk6x7yL6uz" }, 
+            { title: "การย่อยอาหาร", url: "https://youtu.be/SsVozuGTwxo?si=Ns0c-gAjSwVDjxNU" }, 
+            { title: "การหายใจระดับเซลล์", url: "https://youtu.be/FRT9Fjj4aKc?si=aiDyV4VYnl7LhQZn" }] }
         };
 
         function showTopicList(key) {
@@ -260,18 +346,6 @@
         }
 
         function closeTopics() { document.getElementById('topic-container').classList.add('hidden'); }
-
-        const chartCtx = document.getElementById('liveChart').getContext('2d');
-        const liveChart = new Chart(chartCtx, {
-            type: 'line',
-            data: { labels: Array(10).fill(''), datasets: [{ data: Array(10).fill(80), borderColor: '#3b82f6', tension: 0.4, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)', pointRadius: 0 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min:0, max:100, display: false }, x: { display: false } } }
-        });
-        function updateChart() {
-            liveChart.data.datasets[0].data.push(focusScore);
-            liveChart.data.datasets[0].data.shift();
-            liveChart.update('none');
-        }
     </script>
 
     <script>
@@ -282,27 +356,22 @@
 
             if (!question) return;
 
-            // แสดงข้อความของผู้ใช้
             chatWindow.innerHTML += `<div class="mb-4 text-right"><span class="bg-blue-600 p-3 rounded-2xl inline-block text-sm shadow-md">${question}</span></div>`;
             chatInput.value = '';
             chatWindow.scrollTop = chatWindow.scrollHeight;
 
             try {
-                
-                
-const response = await fetch('/api/chat', { 
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        prompt: question,
-        score: typeof focusScore !== 'undefined' ? Math.round(focusScore) : 0, 
-        focusLevel: (typeof focusScore !== 'undefined' && focusScore > 70) ? 'สูง' : 'ต่ำ'
-    })
-});
+                const response = await fetch('/api/chat', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: question,
+                        score: typeof focusScore !== 'undefined' ? Math.round(focusScore) : 0, 
+                        focusLevel: (typeof focusScore !== 'undefined' && focusScore > 70) ? 'สูง' : 'ต่ำ'
+                    })
+                });
 
                 const data = await response.json();
-                
-                // แสดงคำตอบจาก AI พี่ติวเตอร์
                 chatWindow.innerHTML += `<div class="mb-4 text-left"><span class="bg-slate-800 p-3 rounded-2xl inline-block text-sm text-slate-200 border border-slate-700 shadow-lg">🤖 พี่ติวเตอร์: ${data.result}</span></div>`;
                 chatWindow.scrollTop = chatWindow.scrollHeight;
 
@@ -311,7 +380,6 @@ const response = await fetch('/api/chat', {
             }
         }
 
-        // ทำให้กด Enter แล้วส่งข้อความได้เลย
         document.querySelector('#chat input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') askAI();
         });
