@@ -48,6 +48,17 @@
             #sidebar { transform: translateX(-100%); }
             #sidebar.open { transform: translateX(0); }
         }
+
+        /* ส่วนที่เพิ่มใหม่: กราฟเลื่อนได้ */
+        .chart-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            cursor: grab;
+            padding-bottom: 10px;
+        }
+        .chart-scroll-container::-webkit-scrollbar { height: 8px; }
+        .chart-scroll-container::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); }
+        .chart-scroll-container::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -70,15 +81,9 @@
 
     <main class="md:ml-64 p-4 md:p-10">
         <section id="monitor" class="tab-content active">
-            <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="mb-6">
                 <h2 class="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">AI FOCUS TRACKER</h2>
-                <div class="flex gap-2">
-                    <button id="toggle-camera-btn" onclick="toggleTracking()" class="px-6 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 font-bold text-sm transition-all shadow-lg shadow-emerald-900/20">
-                        <i class="fa-solid fa-play mr-2"></i>เริ่มตรวจจับ
-                    </button>
-                </div>
             </div>
-            
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 glass rounded-3xl overflow-hidden relative shadow-2xl min-h-[300px] md:min-h-[450px]">
                     <div id="fixed-video-wrapper">
@@ -86,8 +91,8 @@
                         <canvas id="ai-canvas" class="w-full h-full scale-x-[-1]"></canvas>
                         <div id="loading-ai" class="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
                             <div class="text-center">
-                                <i id="loading-icon" class="fa-solid fa-video-slash text-4xl text-slate-500 mb-2"></i>
-                                <p id="loading-text">ปิดระบบตรวจจับอยู่</p>
+                                <i id="loading-icon" class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-2"></i>
+                                <p id="loading-text">กำลังโหลดระบบ...</p>
                             </div>
                         </div>
                     </div>
@@ -95,19 +100,18 @@
                 <div class="space-y-4">
                     <div class="glass p-6 rounded-3xl text-center">
                         <p class="text-slate-400 text-xs mb-2 uppercase tracking-widest">Focus Status</p>
-                        <h3 id="focus-label" class="text-2xl font-black text-slate-500 italic">OFFLINE</h3>
+                        <h3 id="focus-label" class="text-2xl font-black text-slate-500 italic">Ready</h3>
+                        
+                        <div class="flex gap-2 mt-4 justify-center">
+                            <button id="camera-toggle" onclick="toggleCamera()" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-xl text-[10px] transition-all">
+                                <i class="fa-solid fa-video-slash mr-1"></i> ปิดกล้อง
+                            </button>
+                            <button onclick="showFullReport()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-xl text-[10px] transition-all">
+                                <i class="fa-solid fa-chart-line mr-1"></i> ดูสรุปผล
+                            </button>
+                        </div>
                     </div>
                     <div class="glass p-4 rounded-3xl h-48"><canvas id="liveChart"></canvas></div>
-                    <div class="glass p-6 rounded-3xl grid grid-cols-2 gap-4">
-                        <div class="text-center border-r border-slate-700">
-                            <p class="text-[10px] text-slate-400 uppercase">Avg Score</p>
-                            <p id="avg-score" class="text-xl font-bold text-blue-400">0%</p>
-                        </div>
-                        <div class="text-center">
-                            <p class="text-[10px] text-slate-400 uppercase">Max Score</p>
-                            <p id="max-score" class="text-xl font-bold text-emerald-400">0%</p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </section>
@@ -115,7 +119,7 @@
         <section id="classroom" class="tab-content">
             <div class="mb-8">
                 <h2 class="text-3xl font-bold text-emerald-400">CLASSROOM</h2>
-                <p class="text-slate-400 text-sm">เลือกบทเรียนเพื่อเริ่มตรวจจับโฟกัส</p>
+                <p class="text-slate-400 text-sm">เลือกบทเรียน & ตรวจจับโฟกัส</p>
             </div>
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
                 <button onclick="showTopicList('physics')" class="glass p-6 rounded-3xl border-b-4 border-blue-500 hover:bg-blue-600/10 transition">
@@ -154,18 +158,31 @@
         </section>
     </main>
 
+    <div id="report-modal" class="fixed inset-0 bg-black/90 z-[200] hidden flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="glass w-full max-w-6xl p-8 rounded-[2.5rem] relative border border-blue-500/30">
+            <button onclick="closeReport()" class="absolute top-6 right-6 text-slate-400 hover:text-white transition-transform hover:scale-110"><i class="fa-solid fa-xmark text-3xl"></i></button>
+            <h2 class="text-3xl font-bold mb-2 text-blue-400">Learning Analytics</h2>
+            <p class="text-slate-400 mb-6 text-sm">เลื่อนแนวนอนเพื่อดูประวัติ (สีแดงคือช่วงที่หลุดโฟกัส)</p>
+            <div class="chart-scroll-container">
+                <div id="full-chart-wrapper" style="height: 400px; min-width: 1000px;">
+                    <canvas id="fullHistoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const videoElement = document.getElementById('webcam');
         const focusLabel = document.getElementById('focus-label');
         
+        // --- ตัวแปรควบคุมระบบ (รวมโค้ดใหม่) ---
         let focusScore = 80;
         let secondCounter = 0;
         let minuteCounter = 0;
-        let isTracking = false;
-        let cameraInstance = null;
-        let maxScoreRecord = 0;
-        let allScores = [];
-
+        let isCameraOn = true;
+        let fullChart = null;
+        let allDataStorage = { labels: [], values: [] }; 
+        
         const chartCtx = document.getElementById('liveChart').getContext('2d');
         const liveChart = new Chart(chartCtx, {
             type: 'line', 
@@ -173,7 +190,7 @@
                 labels: Array(20).fill(''), 
                 datasets: [{
                     label: 'ระดับการโฟกัส',
-                    data: Array(20).fill(0), 
+                    data: Array(20).fill(80), 
                     borderColor: '#60a5fa', 
                     backgroundColor: 'rgba(96, 165, 250, 0.2)', 
                     fill: true, 
@@ -186,64 +203,32 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: { min: 0, max: 100, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    y: { 
+                        min: 0, max: 100,
+                        ticks: { color: '#94a3b8' }, 
+                        grid: { color: 'rgba(255,255,255,0.05)' } 
+                    },
+                    x: { 
+                        ticks: { color: '#94a3b8' }, 
+                        grid: { display: false } 
+                    }
                 },
                 plugins: { legend: { display: false } }
             }
         });
 
-        // ฟังก์ชัน เปิด/ปิด การตรวจจับ
-        async function toggleTracking() {
-            const btn = document.getElementById('toggle-camera-btn');
-            const loadingAI = document.getElementById('loading-ai');
-            
-            if (!isTracking) {
-                // เปิดกล้อง
-                isTracking = true;
-                btn.innerHTML = '<i class="fa-solid fa-stop mr-2"></i>หยุดตรวจจับ';
-                btn.className = "px-6 py-2 rounded-full bg-rose-600 hover:bg-rose-500 font-bold text-sm transition-all shadow-lg shadow-rose-900/20";
-                loadingAI.innerHTML = '<div class="text-center"><i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-2"></i><p>กำลังเปิดกล้อง...</p></div>';
-                
-                if (!cameraInstance) {
-                    await initCamera();
-                } else {
-                    cameraInstance.start();
-                    loadingAI.style.display = 'none';
-                }
-            } else {
-                // ปิดกล้อง
-                isTracking = false;
-                btn.innerHTML = '<i class="fa-solid fa-play mr-2"></i>เริ่มตรวจจับ';
-                btn.className = "px-6 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 font-bold text-sm transition-all shadow-lg shadow-emerald-900/20";
-                loadingAI.style.display = 'flex';
-                loadingAI.innerHTML = '<div class="text-center"><i class="fa-solid fa-video-slash text-4xl text-slate-500 mb-2"></i><p>หยุดระบบแล้ว</p></div>';
-                focusLabel.innerText = "OFFLINE";
-                focusLabel.className = "text-2xl font-black text-slate-500 italic";
-                
-                if (videoElement.srcObject) {
-                    videoElement.srcObject.getTracks().forEach(track => track.stop());
-                }
-            }
-        }
-
+        // แก้ไขฟังก์ชันอัปเดต ให้บันทึกข้อมูลถาวรด้วย
         function updateChart() {
-            if (!isTracking) return;
-            
             secondCounter++;
             if (secondCounter % 10 === 0) { 
                 minuteCounter++;
                 const currentScore = Math.round(focusScore);
-                
-                // เก็บสถิติภาพรวม
-                allScores.push(currentScore);
-                if (currentScore > maxScoreRecord) maxScoreRecord = currentScore;
-                
-                // อัปเดต UI ภาพรวม
-                document.getElementById('max-score').innerText = maxScoreRecord + "%";
-                const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
-                document.getElementById('avg-score').innerText = Math.round(avg) + "%";
 
+                // 1. เก็บเข้าตัวแปรถาวร (สำหรับ Modal)
+                allDataStorage.labels.push(minuteCounter);
+                allDataStorage.values.push(currentScore);
+
+                // 2. อัปเดตกราฟหน้าจอหลัก (สไลด์ข้อมูล 20 จุด)
                 liveChart.data.labels.push(minuteCounter); 
                 liveChart.data.datasets[0].data.push(currentScore);
 
@@ -255,12 +240,109 @@
             }
         }
 
+        // --- ฟังก์ชันควบคุมกล้องและรายงาน (เพิ่มใหม่) ---
+        async function toggleCamera() {
+            const btn = document.getElementById('camera-toggle');
+            if (isCameraOn) {
+                if(videoElement.srcObject) {
+                    videoElement.srcObject.getTracks().forEach(track => track.stop());
+                }
+                videoElement.srcObject = createFakeStream();
+                btn.innerHTML = '<i class="fa-solid fa-video mr-1"></i> เปิดกล้อง';
+                btn.classList.replace('bg-slate-700', 'bg-emerald-600');
+                isCameraOn = false;
+                focusLabel.innerText = "ปิดกล้อง";
+            } else {
+                await initCamera();
+                btn.innerHTML = '<i class="fa-solid fa-video-slash mr-1"></i> ปิดกล้อง';
+                btn.classList.replace('bg-emerald-600', 'bg-slate-700');
+                isCameraOn = true;
+            }
+        }
+
+        function showFullReport() {
+            document.getElementById('report-modal').classList.remove('hidden');
+            const fullCtx = document.getElementById('fullHistoryChart').getContext('2d');
+            
+            // ขยายความกว้างตามข้อมูลที่มี (จุดละ 40px)
+            const minWidth = Math.max(1000, allDataStorage.labels.length * 40);
+            document.getElementById('full-chart-wrapper').style.width = minWidth + "px";
+
+            if (fullChart) fullChart.destroy();
+            fullChart = new Chart(fullCtx, {
+                type: 'line',
+                data: {
+                    labels: allDataStorage.labels,
+                    datasets: [{
+                        label: 'ระดับสมาธิ (%)',
+                        data: allDataStorage.values,
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 5,
+                        pointBackgroundColor: (c) => c.raw < 50 ? '#fb7185' : '#34d399'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { min: 0, max: 100, ticks: { color: '#94a3b8' } },
+                        x: { ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function closeReport() { document.getElementById('report-modal').classList.add('hidden'); }
+
+        function createFakeStream() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 640; canvas.height = 480;
+            const ctx = canvas.getContext('2d');
+            setInterval(() => {
+                ctx.fillStyle = '#111';
+                ctx.fillRect(0, 0, 640, 480);
+                ctx.fillStyle = '#333';
+                ctx.font = "20px Kanit";
+                ctx.fillText('CAMERA OFF / FAKE STREAM', 180, 240);
+            }, 100);
+            return canvas.captureStream();
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('overlay').classList.toggle('hidden');
+        }
+        
+        function switchTab(id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('bg-slate-800', 'text-white');
+                if(b.getAttribute('onclick').includes(id)) b.classList.add('bg-slate-800', 'text-white');
+            });
+            if (window.innerWidth < 768) toggleSidebar();
+        }
+
+        function checkGaze(landmarks) {
+            if(!landmarks) return false;
+            const eyeDistance = landmarks[145].y - landmarks[159].y;
+            const isEyeOpen = eyeDistance > 0.012; 
+            const leftIris = landmarks[468];
+            const isLookingCenter = leftIris && (leftIris.x > 0.35 && leftIris.x < 0.65);
+            return isEyeOpen && isLookingCenter;
+        }
+
         const faceMesh = new FaceMesh({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${f}` });
         faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
         
         faceMesh.onResults((results) => {
-            if (!isTracking) return;
             document.getElementById('loading-ai').style.display = 'none';
+            if (!isCameraOn) return; // ถ้าปิดกล้อง ไม่ต้องประมวลผล
+
             let isFocused = false;
             let faceDetected = false; 
 
@@ -289,50 +371,43 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 videoElement.srcObject = stream;
-                cameraInstance = new Camera(videoElement, {
-                    onFrame: async () => { if(isTracking) await faceMesh.send({image: videoElement}); },
+                const camera = new Camera(videoElement, {
+                    onFrame: async () => { if(isCameraOn) await faceMesh.send({image: videoElement}); },
                     width: 640, height: 480
                 });
-                cameraInstance.start();
+                camera.start();
             } catch (err) {
-                alert("ไม่สามารถเข้าถึงกล้องได้");
-                isTracking = false;
+                videoElement.srcObject = createFakeStream();
+                document.getElementById('loading-icon').className = "fa-solid fa-triangle-exclamation text-amber-500 text-4xl mb-2";
+                document.getElementById('loading-text').innerText = "โหมดทดสอบ: ไม่พบกล้อง";
+                setTimeout(() => document.getElementById('loading-ai').style.display = 'none', 2000);
             }
         }
+        initCamera();
 
-        function checkGaze(landmarks) {
-            if(!landmarks) return false;
-            const eyeDistance = landmarks[145].y - landmarks[159].y;
-            return eyeDistance > 0.012; 
+        async function enablePiP() {
+            try {
+                if (videoElement.readyState < 2) { alert("ระบบยังไม่พร้อม"); return; }
+                if (document.pictureInPictureElement) return;
+                await videoElement.requestPictureInPicture();
+            } catch (e) { alert("เบราว์เซอร์บล็อกการทำงาน"); }
         }
 
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('overlay').classList.toggle('hidden');
-        }
-        
-        function switchTab(id) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                b.classList.remove('bg-slate-800', 'text-white');
-                if(b.getAttribute('onclick').includes(id)) b.classList.add('bg-slate-800', 'text-white');
-            });
-            if (window.innerWidth < 768) toggleSidebar();
+        async function startLesson(url) {
+            if (!document.pictureInPictureElement) await enablePiP();
+            setTimeout(() => { window.open(url, '_blank'); }, 600);
         }
 
         const topicsData = {
-            physics: { name: "ฟิสิกส์", color: "blue", 
+            physics: { name: "ฟิสิกส์", color: "blue",
             items: [
-                { title: "การเคลื่อนที่แนวตรง", url: "https://youtu.be/dcqXCYp1cZw?si=ixZfC81sn8EpWylW" }, 
-                { title: "แรงและกฏการเคลื่อนที่", url: "https://youtu.be/N9yoibrobCg?si=yd98Lt1np95quGKT" }, 
-                { title: "สมดุลกล", url: "https://youtu.be/EcSHK27lcPs?si=LXSgmxKUSfGBZP8k" }, 
-                { title: "งานและพลังงาน", url: "https://youtu.be/JZPElBZaMJo?si=KsJ4VcuoUotHe4YN" }, 
-                { title: "โมเมนตัมและการชน", url: "https://youtu.be/NUpbuXeLnmU?si=scUdG6O-T0nGt4uR" }, 
-                { title: "การเคลื่อนที่แบบโพรเจกไทล์", url: "https://youtu.be/177VJg1I_NQ?si=QH_4CCMESZRjGZ56" }] },
-
+            { title: "การเคลื่อนที่แนวตรง", url: "https://youtu.be/dcqXCYp1cZw?si=ixZfC81sn8EpWylW" }, 
+            { title: "แรงและกฏการเคลื่อนที่", url: "https://youtu.be/N9yoibrobCg?si=yd98Lt1np95quGKT" }, 
+            { title: "สมดุลกล", url: "https://youtu.be/EcSHK27lcPs?si=LXSgmxKUSfGBZP8k" }, 
+            { title: "งานและพลังงาน", url: "https://youtu.be/JZPElBZaMJo?si=KsJ4VcuoUotHe4YN" }, 
+            { title: "โมเมนตัมและการชน", url: "https://youtu.be/NUpbuXeLnmU?si=scUdG6O-T0nGt4uR" }, 
+            { title: "การเคลื่อนที่แบบโพรเจกไทล์", url: "https://youtu.be/177VJg1I_NQ?si=QH_4CCMESZRjGZ56" }] },
             chemistry: { name: "เคมี", color: "emerald", 
-
             items: [
                 { title: "ความปลอดภัยในห้องปฏิบัติการ", url: "https://youtube.com/playlist?list=PLGmsX63OOmXr4oLRCNdxuAGPAZ6cYUX90&si=Ukwja-9Q9MrWnJyM" }, 
                 { title: "อะตอมและตารางธาตุ", url: "https://youtube.com/playlist?list=PLSdxlgp7CC2Q33BE877ck383ZqP4GAuuL&si=Ekip8Yfhtlomk5iI" }, 
@@ -340,24 +415,20 @@
                 { title: "โมลและสูตรโมเลกุล", url: "https://youtube.com/playlist?list=PLlSdOm06ZZ7T-YxGmJYqr218iuIiuOK__&si=mSsSiF0s6CyHEYAX" }, 
                 { title: "สารละลาย", url: "https://youtube.com/playlist?list=PLHY_bhZpPfZxJVv71pmrI-oPy3YTPDOse&si=_9UHbneFAyPjB2DD" }, 
                 { title: "ปริมาณสารสัมพันธ์", url: "https://youtube.com/playlist?list=PLlSdOm06ZZ7Q8UwIhklDMR_-oXqwO7GpO&si=V3c8zXi6IW2QwH0n" }] },
-
             math: { name: "คณิตศาสตร์", color: "yellow", 
-
             items: [
-                { title: "เซต", url: "https://youtu.be/U3b904GBpnI?si=jvuU420l6F2M8YO5" }, 
+            { title: "เซต", url: "https://youtu.be/U3b904GBpnI?si=jvuU420l6F2M8YO5" }, 
             { title: "ตรรกศาสตร์", url: "https://youtu.be/2ImBmLx-oRk?si=A5zPiBXMDOnqUoY-" }, 
-            { title: "จำนวนจริง", url: "https://www.youtube.com/live/2Xhzt8Fetn0?si=m1m4x_7SrkVLFEm0" },
-             { title: "ฟังก์ชั่น", url: "https://youtu.be/470KJ3cIEFU?si=uSom7JZ1lKGNQNQO" }, 
-             { title: "เลขาคณิตวิเคราะห์", url: "https://youtu.be/MbG77ZOMgUU?si=Vp_g6rUmyGQts-ER" }] },
-
+            { title: "จำนวนจริง", url: "https://www.youtube.com/live/2Xhzt8Fetn0?si=m1m4x_7SrkVLFEm0" }, 
+            { title: "ฟังก์ชั่น", url: "https://youtu.be/470KJ3cIEFU?si=uSom7JZ1lKGNQNQO" }, 
+            { title: "เลขาคณิตวิเคราะห์", url: "https://youtu.be/MbG77ZOMgUU?si=Vp_g6rUmyGQts-ER" }] },
             biology: { name: "ชีววิทยา", color: "red", 
-
             items: [
-                { title: "เคมีที่เป็นพื้นฐานสิ่งมีชีวิต", url: "https://youtu.be/C7Qt8YomPFI?si=kIOX-jXouEL068Ta" }, 
-                { title: "เซลล์ของสิ่งมีชีวิต", url: "https://youtu.be/Hx8si06BnDM?si=4hvq9gjpzMFkIN0g" }, 
-                { title: "การแบ่งเซลล์", url: "https://youtu.be/Cya7cMowg4A?si=6vby5gPk6x7yL6uz" }, 
-                { title: "การย่อยอาหาร", url: "https://youtu.be/SsVozuGTwxo?si=Ns0c-gAjSwVDjxNU" }, 
-                { title: "การหายใจระดับเซลล์", url: "https://youtu.be/FRT9Fjj4aKc?si=aiDyV4VYnl7LhQZn" }] }
+            { title: "เคมีที่เป็นพื้นฐานสิ่งมีชีวิต", url: "https://youtu.be/C7Qt8YomPFI?si=kIOX-jXouEL068Ta" }, 
+            { title: "เซลล์ของสิ่งมีชีวิต", url: "https://youtu.be/Hx8si06BnDM?si=4hvq9gjpzMFkIN0g" }, 
+            { title: "การแบ่งเซลล์", url: "https://youtu.be/Cya7cMowg4A?si=6vby5gPk6x7yL6uz" }, 
+            { title: "การย่อยอาหาร", url: "https://youtu.be/SsVozuGTwxo?si=Ns0c-gAjSwVDjxNU" }, 
+            { title: "การหายใจระดับเซลล์", url: "https://youtu.be/FRT9Fjj4aKc?si=aiDyV4VYnl7LhQZn" }] }
         };
 
         function showTopicList(key) {
@@ -366,17 +437,19 @@
             document.getElementById('selected-subject-title').innerText = data.name;
             list.innerHTML = data.items.map((item, index) => {
                 const orderNumber = String(index + 1).padStart(2, '0');
-                return `<div class="flex items-center p-4 rounded-xl bg-slate-800/60 border border-slate-700 hover:bg-slate-700/50 transition-all group">
-                    <div class="flex-shrink-0 w-10 h-8 flex items-center justify-center rounded-lg bg-${data.color}-500/20 border border-${data.color}-500/40 mr-4"><span class="text-${data.color}-400 font-bold text-xs">${orderNumber}</span></div>
+                return `
+                <div class="flex items-center p-4 rounded-xl bg-slate-800/60 border border-slate-700 hover:bg-slate-700/50 transition-all group">
+                    <div class="flex-shrink-0 w-10 h-8 flex items-center justify-center rounded-lg bg-${data.color}-500/20 border border-${data.color}-500/40 mr-4">
+                        <span class="text-${data.color}-400 font-bold text-xs">${orderNumber}</span>
+                    </div>
                     <div class="flex-1"><span class="text-sm font-medium text-slate-200">${item.title}</span></div>
                     <button onclick="startLesson('${item.url}')" class="bg-${data.color}-600 hover:bg-${data.color}-500 px-4 py-2 rounded-lg text-xs font-bold text-white transition-all ml-4">เริ่มเรียน</button>
                 </div>`;
             }).join('');
             document.getElementById('topic-container').classList.remove('hidden');
         }
+
         function closeTopics() { document.getElementById('topic-container').classList.add('hidden'); }
-        async function enablePiP() { try { if (videoElement.readyState < 2) return; await videoElement.requestPictureInPicture(); } catch (e) {} }
-        async function startLesson(url) { if (!document.pictureInPictureElement) await enablePiP(); window.open(url, '_blank'); }
     </script>
 
     <script>
@@ -384,24 +457,36 @@
             const chatInput = document.querySelector('#chat input');
             const chatWindow = document.getElementById('chat-window');
             const question = chatInput.value.trim();
+
             if (!question) return;
+
             chatWindow.innerHTML += `<div class="mb-4 text-right"><span class="bg-blue-600 p-3 rounded-2xl inline-block text-sm shadow-md">${question}</span></div>`;
             chatInput.value = '';
             chatWindow.scrollTop = chatWindow.scrollHeight;
+
             try {
                 const response = await fetch('/api/chat', { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: question, score: Math.round(focusScore), focusLevel: (focusScore > 70) ? 'สูง' : 'ต่ำ' })
+                    body: JSON.stringify({
+                        prompt: question,
+                        score: typeof focusScore !== 'undefined' ? Math.round(focusScore) : 0, 
+                        focusLevel: (typeof focusScore !== 'undefined' && focusScore > 70) ? 'สูง' : 'ต่ำ'
+                    })
                 });
+
                 const data = await response.json();
                 chatWindow.innerHTML += `<div class="mb-4 text-left"><span class="bg-slate-800 p-3 rounded-2xl inline-block text-sm text-slate-200 border border-slate-700 shadow-lg">🤖 พี่ติวเตอร์: ${data.result}</span></div>`;
                 chatWindow.scrollTop = chatWindow.scrollHeight;
+
             } catch (error) {
                 chatWindow.innerHTML += `<div class="text-red-400 text-[10px] text-center mb-4 italic">เชื่อมต่อพี่ติวเตอร์ไม่ได้</div>`;
             }
         }
-        document.querySelector('#chat input').addEventListener('keypress', function (e) { if (e.key === 'Enter') askAI(); });
+
+        document.querySelector('#chat input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') askAI();
+        });
     </script>
 </body>
 </html>
