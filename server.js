@@ -19,7 +19,7 @@ app.post('/chat', async (req, res) => {
         
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         
-        const systemInstruction = `คุณคือที่ปรึกษา EduSmart AI คะแนนสมาธิคือ ${score || 0} ระดับคือ ${focusLevel || 'ปกติ'}`;
+        const systemInstruction = `คุณคือที่ปรึกษา AI assistant คะแนนสมาธิคือ ${score || 0} ระดับคือ ${focusLevel || 'ปกติ'}`;
 
         const result = await model.generateContent(systemInstruction + "\nคำถาม: " + prompt);
         const aiResponse = result.response.text();
